@@ -1,0 +1,10 @@
+space HELLO:
+    space WORLD:
+        pass
+    
+    space GIGA:
+        space CHAD:
+            pass
+
+space QINP:
+    pass

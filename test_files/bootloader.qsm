@@ -1,0 +1,72 @@
+~~~~~~~~~~ INITIAL SETUP ~~~~~~~~~~
+
+~~ view 'boot' message on 7-segment display
+
+lui r0 sts:"bo"
+lli r0 sts:"ot"
+st -3 r0
+
+~~ store vga base address in r0
+lui r0 0b0000000100000100
+lli r0 0b0000000000000000
+~~ set output mode to text
+st r0 0
+
+~~~~~~~~~~ RENDERING LOOP ~~~~~~~~~~
+
+~~ r0 -> vram base address
+~~ r1 -> x position
+~~ r2 -> y position
+~~ r3 -> combined vram address
+~~ r4 -> pixel data
+~~ r5 -> temp pixel address
+~~ r6 -> loop-label address
+
+~~ store vram base address in r0
+lui r0 0b0000000100000000
+lli r0 0b0000000000000000
+
+~~ r1 stores x position
+mov r1 0
+
+~~ r2 stores y position
+mov r2 0
+
+~~ store loop-label address in r6
+li r6 loop
+
+->loop
+    ~~ load pixel data from uart
+    ld r4 -1
+    ~~ if no data is available, skip display update
+    jlz r6 r4
+    ~~ echo received pixel data to uart
+    st -1 r4
+
+    ~~ calculate pixel address and store data in vram
+
+    ~~ shift x position 9 bits to the left
+    shl r5 r1 9
+    ~~ combine x position with vram base address
+    or r3 r0 r5
+    ~~ combine y position with current pixel address
+    or r3 r3 r2
+    ~~ store pixel data in vram
+    st r3 r4
+
+    ~~ increment x position
+    add r1 r1 1
+    ~~ if x position is equal to 160, reset x position and increment y position
+    jnz r6 r1(-160)
+    mov r1 0
+    add r2 r2 1
+    ~~ if y position is equal to 80, reset y position
+    jnz r6 r2(-80)
+    mov r2 0
+
+~~ jump to loop
+jmp r6
+
+->helloWorldMsg
+jmp rel:helloWorldMsg
+~~.byte "Hello, world!", 0

@@ -1,0 +1,15 @@
+SpaceDefinition:
+    "space" " " SpaceName ":\n" SpaceBody
+
+Indentation:
+    IndentationStack
+
+SpaceName:
+    [ 'az' 'AZ' ]+
+
+SpaceBody:
+    IndentationIncrease SpaceStatement "\n" ( Indentation SpaceStatement "\n" )* IndentationDecrease
+
+SpaceStatement:
+    "pass"
+    SpaceDefinition*

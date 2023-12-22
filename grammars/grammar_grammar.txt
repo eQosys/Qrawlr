@@ -1,0 +1,97 @@
+Grammar:
+	[ RuleDefinition Comment_ Whitespace_ "\n"_ ]*
+
+RuleDefinition:
+	RuleHeader RuleBody
+
+RuleHeader:
+	RuleName ("("_ RuleModifierList ")"_)? ":\n"_
+
+RuleName(fuse):
+	AlphaChar AlnumChar*
+
+RuleModifierList(hidden):
+	RuleModifier (" "_ RuleModifier)*
+
+RuleModifier(hidden):
+	RuleModifierHidden
+	RuleModifierFuse
+
+RuleModifierHidden:
+	"hidden"_
+
+RuleModifierFuse:
+	"fuse"_
+
+RuleBody:
+	(Whitespace_ RuleOptionDefinition "\n"_)+
+
+Whitespace:
+	[ " " "\t" ]+
+
+RuleOptionDefinition(hidden):
+	RuleOption (Whitespace?_ RuleOption)*
+
+RuleOption:
+	RuleOptionMatchAll   RuleOptionModifiers
+	RuleOptionMatchAny   RuleOptionModifiers
+	RuleOptionMatchRange RuleOptionModifiers
+	RuleOptionMatchExact RuleOptionModifiers
+	RuleOptionMatchRule  RuleOptionModifiers
+
+RuleOptionModifiers(hidden):
+	RuleOptionInvert? RuleOptionQuantifier? RuleOptionOmitMatch?
+
+RuleOptionInvert:
+	"!"_
+
+RuleOptionQuantifier:
+	[ "?" "*" "+" ]
+
+RuleOptionOmitMatch:
+	"_"_
+
+RuleOptionMatchAll:
+	"("_ "^"? Whitespace?_ RuleOptionDefinition Whitespace?_ ")"_
+
+RuleOptionMatchAny:
+	"["_ "^"? Whitespace?_ RuleOptionDefinition Whitespace?_ "]"_
+
+RuleOptionMatchRange:
+	"'"_ MatchRangeChars MatchRangeChars "'"_
+
+MatchRangeChars(hidden):
+	StringChar
+
+RuleOptionMatchExact(fuse):
+	"\""_ StringChar+ "\""_
+#	"\""_ [ "\\\"" "\""! ]+ "\""_
+
+StringChar(hidden):
+	AlphaChar
+	NumChar
+	EscapeChar
+	SpecialChar
+
+RuleOptionMatchRule:
+	RuleName
+
+AlnumChar(hidden):
+	AlphaChar
+	NumChar
+
+AlphaChar(hidden):
+	'az'
+	'AZ'
+
+NumChar(hidden):
+	'09'
+
+EscapeChar(hidden):
+	"\\" [ "\"" "\\" "n" "t" ]
+
+SpecialChar(hidden):
+	[' !' '#/' ':@' '[`' '{~']
+
+Comment:
+	"#" [ StringChar "\"" "\t" ]*

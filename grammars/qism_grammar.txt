@@ -1,0 +1,74 @@
+Code:
+	(CodeLine "\n"_)* CodeLine?
+
+CodeLine(hidden):
+	Whitespace?_ Statement? Whitespace?_ Comment?
+
+Statement(hidden):
+	InstructionUsage
+	LabelDefinition
+
+InstructionUsage:
+	InstructionName (Whitespace_ InstructionArgument)*
+
+InstructionName:
+	[ "add" "or" "shl" "li" "lui" "lli" "st" "ld" "jlz" "jnz" "jmp" "mov" ]
+
+Whitespace(fuse):
+	[" " "\t"]+
+
+InstructionArgument:
+	RegisterName ("("_ Literal ")"_)?
+	Literal
+
+RegisterName(fuse):
+	"r" NumChar+
+
+Literal:
+	"sts" ":"_ String
+	( [ "rel" "upr" "lwr" ] ":"_ )? [LiteralInteger LabelName]
+
+LiteralInteger(fuse):
+	Sign? "0x" [ NumChar "a" "b" "c" "d" "e" "f" "A" "B" "C" "D" "E" "F" ]+
+	Sign? "0b" [ "0" "1" ]+
+	Sign? "0"  [ "0" "1" "2" "3" "4" "5" "6" "7" ]*
+	Sign? NumChar+
+
+Sign(hidden):
+	[ "+" "-" ]
+
+LabelName(fuse):
+	AlphaChar AlnumChar*
+
+LabelDefinition:
+	"->"_ LabelName
+
+Comment(fuse):
+#	"~~" (^"\n")
+	"~~" [StringChar "\"" "\t" ]*
+
+
+String(fuse):
+	"\""_ StringChar* "\""_
+
+StringChar(hidden):
+	AlnumChar
+	EscapeChar
+	SpecialChar
+
+AlnumChar(hidden):
+	AlphaChar
+	NumChar
+
+AlphaChar(hidden):
+	'az'
+	'AZ'
+
+NumChar(hidden):
+	'09'
+
+EscapeChar(hidden):
+	"\\" [ "\"" "\\" "n" "t" ]
+
+SpecialChar(hidden):
+	[ "(" ")" "[" "]" "{" "}" " " ":" "+" "-" "*" "/" "?" "!" ">" "<" "~" "." "," ";" "'" "_" "=" "&" "|" "^" "@" "#" "$" "%" "`" ]
