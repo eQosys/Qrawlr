@@ -1,20 +1,84 @@
-Code:
-    SpaceStatement ( "\n"_ SpaceStatement )*
+# ---------------- GLOBAL ----------------
 
-StatementSpaceDefinition:
-    "space"_ " "_ SpaceName ":\n"_ SpaceBody
+GlobalCode:
+    GlobalCodeLine ( Newline_ GlobalCodeLine )*
 
-StatementPass:
+GlobalCodeLine(hidden):
+    GlobalStatement? SingleLineComment?
+
+GlobalStatement(hidden):
+    Pass
+    Import
+    SpaceDefinition
+
+# ---------------- IDENTIFIER ----------------
+
+Identifier(fuse):
+    IdentifierFirstChar IdentifierChar*
+
+IdentifierFirstChar(hidden):
+    [ 'az' 'AZ' "_" ]
+
+IdentifierChar(hidden):
+    [IdentifierFirstChar '09' ]
+
+# ---------------- IMPORT ----------------
+
+Import:
+    "import"_ ImportModifiers Whitespace_ StringLiteral
+
+ImportModifiers:
+    ( "."_ Identifier)*
+
+# ---------------- SPACE ----------------
+
+SpaceDefinition:
+    "space"_ Whitespace_ Identifier ":"_ Whitespace?_ Newline_ SpaceBody
+
+SpaceBody:
+    IndentationIncrease_ SpaceBodyLine ( Newline_ [ ( IndentationCurrent_ SpaceBodyLine ) SingleLineComment ] )* IndentationDecrease_
+
+SpaceBodyLine(hidden):
+    SpaceStatement? SingleLineComment?
+
+SpaceStatement(hidden):
+    Pass
+    SpaceDefinition
+
+# ---------------- WHITESPACE ----------------
+
+Whitespace:
+    WhitespaceChar+
+
+WhitespaceChar:
+    [ " " "\t"]
+
+Newline:
+    "\n"
+
+# ---------------- LITERALS ----------------
+
+StringLiteral:
+    "\"" StringChar* "\""
+
+StringChar:
+    [ "\\\\" "\\\"" "\""! ]
+
+# ---------------- VERBOSE ----------------
+
+Pass:
     "pass"_
+Break:
+    "break"_
+Continue:
+    "continue"_
+#Return:
+#    "return"_ Expression?
+
+# ---------------- INDENTATION ----------------
 
 IndentationCurrent:
     :IndentationStack.0:
-
-SpaceName(fuse):
-    [ 'az' 'AZ' ]+
-
-SpaceBody:
-    IndentationIncrease SpaceStatement ( "\n"_ IndentationCurrent SpaceStatement )* IndentationDecrease
 
 IndentationIncrease:
     ( IndentationCurrent Whitespace ){ push IndentationStack }
@@ -22,9 +86,6 @@ IndentationIncrease:
 IndentationDecrease:
     ""{ pop IndentationStack }
 
-SpaceStatement(hidden):
-    StatementPass
-    StatementSpaceDefinition
-
-Whitespace(hidden fuse):
-    [ " " "\t" ]+
+# ---------------- COMMENTS ----------------
+SingleLineComment(fuse):
+    Whitespace?_ "\\\\" "\n"!*

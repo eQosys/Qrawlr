@@ -1,11 +1,17 @@
+\\ THIS IS A COMMENT
 space HELLO:
     pass
     space WORLD:
+        \\ THIS IS ANOTHER COMMENT
         pass
+
+        \\ THIS IS A COMMENT WITH "WRONG" INDENTATION
         pass
     space GIGA:
+
         space CHAD:
             pass
+
 space QINP:
     pass
     pass
