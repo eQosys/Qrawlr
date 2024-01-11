@@ -61,17 +61,12 @@ RuleOptionMatchRange:
 	"'"_ MatchRangeChars MatchRangeChars "'"_
 
 MatchRangeChars(hidden):
-	StringChar
-
-RuleOptionMatchExact(fuse):
-	"\""_ StringChar+ "\""_
-#	"\""_ [ "\\\"" "\""! ]+ "\""_
-
-StringChar(hidden):
-	AlphaChar
-	NumChar
+	AlnumChar
 	EscapeChar
 	SpecialChar
+
+RuleOptionMatchExact(fuse):
+	"\""_ [ "\\\\" "\\\"" "\""! ]+ "\""_
 
 RuleOptionMatchRule:
 	RuleName
@@ -94,4 +89,4 @@ SpecialChar(hidden):
 	[' !' '#/' ':@' '[`' '{~']
 
 Comment:
-	"#" [ StringChar "\"" "\t" ]*
+	"#" "\n"!*

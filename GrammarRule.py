@@ -15,15 +15,19 @@ class RuleOption(ABC):
         self.omit_match = omit_match
 
     def match(self, string: str, ruleset: dict[str, "RuleOption"]) -> (ParseTreeNode, int):
+        if isinstance(self, RuleOptionMatchExact):
+            if self.value == "\\\"":
+                pass
+
         tree = ParseTreeNode()
         length = 0
 
-        count = 0
+        match_count = 0
         while True:
             sub_tree, sub_length = self._apply_optional_invert(string[length:], *self._match(string[length:], ruleset))
             if sub_tree is None:
                 break
-            count += 1
+            match_count += 1
 
             length += sub_length
 
@@ -33,6 +37,7 @@ class RuleOption(ABC):
                 break
             if self.quantifier == QUANTIFIER_ZERO_OR_ONE:
                 break
+
             if self.quantifier == QUANTIFIER_ZERO_OR_MORE:
                 continue
             if self.quantifier == QUANTIFIER_ONE_OR_MORE:
@@ -43,7 +48,7 @@ class RuleOption(ABC):
         if self.quantifier == QUANTIFIER_ZERO_OR_MORE:
             return tree, length
         
-        if count == 0:
+        if match_count == 0:
             return None, 0
 
         return tree, length

@@ -67,7 +67,7 @@ def run_test(grammarfile: str, entry_rule: str, text: str):
         raise GrammarException("Could not parse text")
     
     if tree.length < len(text):
-        print("ERROR: Text was not fully parsed")
+        print("WARN: Text was not fully parsed")
     else:
         print("INFO: Fully parsed text")
 
@@ -127,8 +127,8 @@ def test_code_generation():
 if __name__ == "__main__":
     try:
         #test_algebra()
-        test_qism()
-        #test_grammar()
+        #test_qism()
+        test_grammar()
         #test_qinp()
         #test_code_generation()
     except GrammarException as e:
