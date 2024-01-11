@@ -23,20 +23,24 @@ class GrammarLoader:
                 self.lines.append((lineCount, line))
 
     def __load_rules(self) -> None:
-        self.ruleset: RuleSet = {}
         self.__referenced_rules: dict[str, tuple(bool, list[tuple[int, int]])] = {}
+
+        self.rules = dict()
+        self.stack_names = set()
 
         while True:
             try:
                 rule = self.__get_parse_rule_definition()
-                self.ruleset[rule.name] = rule
+                self.rules[rule.name] = rule
             except IndexError:
                 break
+
+        self.ruleset = RuleSet(self.rules, self.stack_names)
 
     def __check_for_unknown_references(self) -> None:
         err_msgs = []
         for name, references in self.__referenced_rules.items():
-            if name not in self.ruleset:
+            if name not in self.ruleset.rules:
                 for line, col in references:
                     err_msgs.append(self.__make_exception(f"Undefined rule '{name}'", col, line))
         
@@ -52,65 +56,75 @@ class GrammarLoader:
         rule = Rule()
         line = self.__get_next_line()
 
-        if not line.endswith(":"):
-            raise self.__make_exception("Expected ':' after rule name", len(line))
-        line = line[:-1]
+        rule.name, col = self.__get_parse_identifier(line, 0)
+        rule.anonymous, rule.fuse_children, line, col = self.__get_parse_rule_definition_header_modifiers(line, col)
 
-        rule.name, line = self.__get_parse_rule_definition_header_name(line)
-        rule.anonymous, rule.fuse_children, line = self.__get_parse_rule_definition_header_modifiers(line)
+        if line[col] != ":":
+            raise self.__make_exception("Expected ':' after rule name", col)
+        col += 1
 
         return rule
     
-    def __get_parse_rule_definition_header_anonymous(self, line: str) -> (bool, str):
-        if line.startswith("~"):
-            return True, line[1:]
-        return False, line
-    
-    def __get_parse_rule_definition_header_fuse_children(self, line: str) -> (bool, str):
-        if line.startswith("+"):
-            return True, line[1:]
-        return False, line
-    
-    def __get_parse_rule_definition_header_name(self, line: str) -> (str, str):
-        for i in range(len(line)):
-            if not line[i].isalnum():
-                name = line[:i]
-                break
-        else:
-            name = line
+    def __get_parse_identifier(self, line: str, col: int) -> (str, int):
+        begin = col
+
+        while col < len(line) and line[col].isalnum():
+            col += 1
+
+        name = line[begin:col]
 
         if name == "":
-            raise self.__make_exception("Expected rule name")
+            raise self.__make_exception("Expected identifier", begin)
+        if not name.isalnum():
+            raise self.__make_exception("Identifiers must be alphanumeric", begin)
         if not name[0].isalpha():
-            raise self.__make_exception("Rule name must start with a letter")
-        if name in self.ruleset:
-            raise self.__make_exception("Rule name already exists")
-        
-        return name, line[i:]
+            raise self.__make_exception("Identifiers must begin with an alpha character", begin)
+
+        return name, col
     
-    def __get_parse_rule_definition_header_modifiers(self, line: str) -> (bool, bool, str):
+    def __get_parse_literal_integer(self, line: str, col: int) -> (int, int):
+        begin = col
+
+        while col < len(line) and line[col].isdigit():
+            col += 1
+
+        value = line[begin:col]
+
+        if value == "":
+            raise self.__make_exception("Expected integer", begin)
+        
+        return int(value), col
+
+    def __get_parse_rule_definition_header_modifiers(self, line: str, col: int) -> (bool, bool, str, int):
         anonymous = False
         fuse_children = False
 
-        if not line.startswith("("):
-            return anonymous, fuse_children, line
-        
-        if not line.endswith(")"):
-            raise self.__make_exception("Expected closing ')'")
-        
-        line = line[1:-1]
+        if col >= len(line):
+            return anonymous, fuse_children, line, col
 
-        elements = line.split(" ")
-        for element in elements:
-            if element == "hidden":
+        if line[col] != "(":
+            return anonymous, fuse_children, line, col
+        col += 1
+
+        col = self.__parse_whitespace(line, col, True)
+        
+        while line[col] != ")":
+            param, col = self.__get_parse_identifier(line, col)
+            if param == "hidden":
                 anonymous = True
-            elif element == "fuse":
+            elif param == "fuse":
                 fuse_children = True
             else:
-                raise self.__make_exception(f"Unknown rule modifier '{element}'")
+                raise self.__make_exception(f"Unknown rule modifier '{param}'", col)
+            
+            col = self.__parse_whitespace(line, col, True)
 
-        return anonymous, fuse_children, ""
+        if line[col] != ")":
+            raise self.__make_exception("Expected closing ')'", col)
+        col += 1
 
+        return anonymous, fuse_children, line, col
+    
     def __get_parse_rule_definition_body(self) -> list[RuleOption]:
         rule_options: list[RuleOption] = []
 
@@ -148,6 +162,8 @@ class GrammarLoader:
             option, col = self.__get_parse_rule_option_match_range(line, col+1)
         elif line[col] == "\"":
             option, col = self.__get_parse_rule_option_match_exact(line, col+1)
+        elif line[col] == ":":
+            option, col = self.__get_parse_stack_match_exact(line, col+1)
         else:
             option, col = self.__get_parse_rule_option_match_rule(line, col)
 
@@ -155,15 +171,17 @@ class GrammarLoader:
             return None, col
 
         col = self.__parse_rule_option_modifiers(line, col, option)
+        col = self.__parse_whitespace(line, col, True)
 
-        col = self.__parse_whitespace(line, col)
+        col = self.__parse_rule_option_executors(line, col, option)
+        col = self.__parse_whitespace(line, col, True)
 
         return option, col
         
     def __get_parse_rule_option_match_all(self, line: str, col: int) -> (RuleOptionMatchAll, int):
         option = RuleOptionMatchAll()
 
-        col = self.__parse_whitespace(line, col)
+        col = self.__parse_whitespace(line, col, True)
 
         while col < len(line) and line[col] != ")":
             sub_option, col = self.__get_parse_rule_option(line, col)
@@ -179,7 +197,7 @@ class GrammarLoader:
     def __get_parse_rule_option_match_any(self, line: str, col: int) -> (RuleOptionMatchAny, int):
         option = RuleOptionMatchAny()
 
-        col = self.__parse_whitespace(line, col)
+        col = self.__parse_whitespace(line, col, True)
 
         while col < len(line) and line[col] != "]":
             sub_option, col = self.__get_parse_rule_option(line, col)
@@ -230,42 +248,74 @@ class GrammarLoader:
 
         value = line[begin:col]
 
-        if value == "":
-            raise self.__make_exception("Empty string not allowed", begin)
+        # TODO: Empty strings are allowed for now
+        #       but they should be disallowed, because the are "useless"
+        #       and can cause infinite loops.
+        #       Allowed for now, for executors to work.
+        #if value == "":
+        #    raise self.__make_exception("Empty string not allowed", begin)
 
         for c in ESCAPE_CHARS:
             value = value.replace(f"\\{c}", eval(f"\"\\{c}\""))
         
         return RuleOptionMatchExact(value), col+1
     
+    def __get_parse_stack_match_exact(self, line: str, col: int) -> (RuleOptionStackMatchExact, int):
+        #print(line)
+        name, col = self.__get_parse_identifier(line, col)
+
+        if line[col] != ".":
+            raise self.__make_exception("Expected '.'", col)
+        col += 1
+
+        index, col = self.__get_parse_literal_integer(line, col)
+
+        if line[col] != ":":
+            raise self.__make_exception("Expected ':'", col)
+
+        return RuleOptionStackMatchExact(name, index), col+1
+
     def __get_parse_rule_option_match_rule(self, line: str, col: int) -> (RuleOptionMatchRule, int):
         begin = col
 
-        while col < len(line) and line[col].isalnum():
-            col += 1
-
-        name = line[begin:col]
-
-        if name == "":
-            raise self.__make_exception("Empty rule name not allowed", begin)
-        
-        if not name.isalnum():
-            raise self.__make_exception("Rule name must be alphanumeric", begin)
-        
-        if not name[0].isalpha():
-            raise self.__make_exception("Rule name must start with a letter", begin)
+        name, col = self.__get_parse_identifier(line, col)
 
         if name not in self.__referenced_rules:
             self.__referenced_rules[name] = []
         self.__referenced_rules[name].append((self.__last_line_id, begin))
         
-        return RuleOptionMatchRule(name), col   
+        return RuleOptionMatchRule(name), col
 
     def __parse_rule_option_modifiers(self, line: str, col: int, option: RuleOption) -> int:
         option.inverted, col = self.__get_parse_rule_option_modifier_inverted(line, col)
         option.quantifier, col = self.__get_parse_rule_option_modifier_quantifier(line, col)
         option.omit_match, col = self.__get_parse_rule_option_modifier_omit_match(line, col)
         return col
+
+    def __parse_rule_option_executors(self, line: str, col: int, option: RuleOption) -> int:
+        if col >= len(line) or line[col] != "{":
+            return col
+        col += 1
+
+        col = self.__parse_whitespace(line, col, True)
+
+        while line[col] != "}":
+            exec_name, col = self.__get_parse_identifier(line, col)
+            col = self.__parse_whitespace(line, col, False)
+            
+            stack_name, col = self.__get_parse_identifier(line, col)
+            col = self.__parse_whitespace(line, col, True)
+            self.stack_names.add(stack_name)
+            
+            option.executors.append((exec_name, stack_name))
+
+            if line[col] != ",":
+                break
+
+        if line[col] != "}":
+            raise self.__make_exception("Expected closing '}'", col)
+
+        return col+1
 
     def __get_parse_rule_option_modifier_inverted(self, line: str, col: int) -> (bool, int):
         if col < len(line) and line[col] == "!":
@@ -290,9 +340,14 @@ class GrammarLoader:
             return True, col+1
         return False, col
 
-    def __parse_whitespace(self, line: str, col: int) -> int:
+    def __parse_whitespace(self, line: str, col: int, optional: bool) -> int:
+        begin = col
         while col < len(line) and line[col] in " \t":
             col += 1
+
+        if not optional and col == begin:
+            raise self.__make_exception("Expected whitespace", col)
+
         return col
 
     def __peek_next_line(self) -> str:

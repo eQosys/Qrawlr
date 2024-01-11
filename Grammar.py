@@ -1,23 +1,27 @@
 from GrammarLoader import GrammarLoader
 from GrammarParseTree import ParseTree
 from GrammarException import GrammarException
-from GrammarRule import Rule
+from GrammarRule import Rule, RuleSet
 
 class Grammar:
     def __init__(self, filename: str = None) -> None:
-        self.ruleset: dict[str, Rule] = {}
+        self.ruleset: RuleSet = {}
         
         if filename is not None:
             self.ruleset = GrammarLoader(filename).ruleset
 
     def apply_to(self, string: str, rule: str) -> ParseTree:
-        if rule not in self.ruleset:
+        if rule not in self.ruleset.rules:
             raise GrammarException(f"Rule '{rule}' not found")
         
-        tree, length = self.ruleset[rule].match(string, self.ruleset)
+        self.ruleset.clear_stacks()
+        tree, length = self.ruleset.rules[rule].match(string, self.ruleset)
 
         if tree is not None:
             tree.name = rule
+
+        if not self.ruleset.stacks_are_empty():
+            raise GrammarException("Stacks not empty after parsing")
 
         return tree
 
@@ -30,7 +34,9 @@ class Grammar:
         for name, rule in self.ruleset.items():
             result += f"    ruleset['{name}'] = {rule._generate_python_code()}\n"
 
-        result += "    return ruleset\n"
+        result += "    g = Grammar()\n"
+        result += "    g.ruleset = ruleset\n"
+        result += "    return g\n"
 
         return result
 

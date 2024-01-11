@@ -1,15 +1,30 @@
-SpaceDefinition:
-    "space" " " SpaceName ":\n" SpaceBody
+Code:
+    SpaceStatement ( "\n"_ SpaceStatement )*
 
-Indentation:
-    IndentationStack
+StatementSpaceDefinition:
+    "space"_ " "_ SpaceName ":\n"_ SpaceBody
 
-SpaceName:
+StatementPass:
+    "pass"_
+
+IndentationCurrent:
+    :IndentationStack.0:
+
+SpaceName(fuse):
     [ 'az' 'AZ' ]+
 
 SpaceBody:
-    IndentationIncrease SpaceStatement "\n" ( Indentation SpaceStatement "\n" )* IndentationDecrease
+    IndentationIncrease SpaceStatement ( "\n"_ IndentationCurrent SpaceStatement )* IndentationDecrease
 
-SpaceStatement:
-    "pass"
-    SpaceDefinition*
+IndentationIncrease:
+    ( IndentationCurrent Whitespace ){ push IndentationStack }
+
+IndentationDecrease:
+    ""{ pop IndentationStack }
+
+SpaceStatement(hidden):
+    StatementPass
+    StatementSpaceDefinition
+
+Whitespace(hidden fuse):
+    [ " " "\t" ]+

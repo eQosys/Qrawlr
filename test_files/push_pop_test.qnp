@@ -1,10 +1,12 @@
 space HELLO:
+    pass
     space WORLD:
         pass
-    
+        pass
     space GIGA:
         space CHAD:
             pass
-
 space QINP:
+    pass
+    pass
     pass

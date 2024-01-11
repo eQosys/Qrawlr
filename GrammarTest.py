@@ -1,6 +1,9 @@
 from Grammar import Grammar, GrammarException
 from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 
+def load_dynamic_grammar():
+    raise GrammarException("this_is_a_test_code_name should have been replaced by code generation")
+
 def write_tree(tree):
     print("INFO: Writing tree to tree.gv... ", end="", flush=True)
     with open("tree.gv", "w") as f:
@@ -103,16 +106,13 @@ def test_qinp():
 
     run_test("grammars/qinp_grammar.txt", "Code", text)
 
-def this_is_a_test_code_name():
-    raise GrammarException("this_is_a_test_code_name should have been replaced by code generation")
-
 def test_code_generation():
     g = Grammar("grammars/grammar_grammar.txt")
     pre_str = str(g)
 
-    exec(g.generate_python_code("this_is_a_test_code_name"), globals())
+    exec(g.generate_python_code("load_dynamic_grammar"), globals())
     g = Grammar()
-    g.ruleset = this_is_a_test_code_name()
+    g.ruleset = load_dynamic_grammar()
     post_str = str(g)
 
     if pre_str != post_str:
@@ -128,8 +128,8 @@ if __name__ == "__main__":
     try:
         #test_algebra()
         #test_qism()
-        test_grammar()
-        #test_qinp()
+        #test_grammar()
+        test_qinp()
         #test_code_generation()
     except GrammarException as e:
         print(f"Error: {e}")

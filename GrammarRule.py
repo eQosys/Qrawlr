@@ -9,20 +9,22 @@ QUANTIFIER_ONE_OR_MORE = "+"
 QUANTIFIER_ONE = ""
 
 class RuleOption(ABC):
-    def __init__(self, inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+    def __init__(self, inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False, executors: list[(str, str)] = []) -> None:
         self.inverted = inverted
         self.quantifier = quantifier
         self.omit_match = omit_match
+        self.executors = []
 
-    def match(self, string: str, ruleset: dict[str, "RuleOption"]) -> (ParseTreeNode, int):
+    def match(self, string: str, ruleset: "RuleSet") -> (ParseTreeNode, int):
         if isinstance(self, RuleOptionMatchExact):
             if self.value == "\\\"":
                 pass
 
         tree = ParseTreeNode()
         length = 0
-
         match_count = 0
+        checkpoint = ruleset.get_checkpoint()
+
         while True:
             sub_tree, sub_length = self._apply_optional_invert(string[length:], *self._match(string[length:], ruleset))
             if sub_tree is None:
@@ -37,19 +39,14 @@ class RuleOption(ABC):
                 break
             if self.quantifier == QUANTIFIER_ZERO_OR_ONE:
                 break
-
-            if self.quantifier == QUANTIFIER_ZERO_OR_MORE:
-                continue
-            if self.quantifier == QUANTIFIER_ONE_OR_MORE:
-                continue
-        
-        if self.quantifier == QUANTIFIER_ZERO_OR_ONE:
-            return tree, length
-        if self.quantifier == QUANTIFIER_ZERO_OR_MORE:
-            return tree, length
         
         if match_count == 0:
-            return None, 0
+            if self.quantifier == QUANTIFIER_ONE or self.quantifier == QUANTIFIER_ONE_OR_MORE:
+                # TODO: Not sure if this is the correct way to handle this, probably not but it works for now
+                ruleset.revert_to_checkpoint(checkpoint)
+                return None, 0
+
+        self._apply_executors(tree, ruleset)
 
         return tree, length
 
@@ -71,7 +68,14 @@ class RuleOption(ABC):
         args.append(f"inverted={self.inverted}")
         args.append(f"quantifier=\"{self.quantifier}\"")
         args.append(f"omit_match={self.omit_match}")
+        args.append(f"executors={self._executors_to_arg_str()}")
         return ", ".join(args)
+
+    def _executors_to_arg_str(self) -> str:
+        executors = []
+        for (operator, operand) in self.executors:
+            executors.append(f"(\"{escape_string(operator)}\", \"{escape_string(operand)}\")")
+        return f"[ {', '.join(executors)} ]"
 
     def _apply_optional_invert(self, string: str, tree: ParseTreeNode, length: int) -> (ParseTreeNode, int):
         if not self.inverted:
@@ -81,6 +85,20 @@ class RuleOption(ABC):
             return ParseTreeExactMatch(string[0]), 1
         
         return None, 0
+
+    def _apply_executors(self, tree: ParseTreeNode, ruleset: "RuleSet") -> None:
+        for (operator, operand) in self.executors:
+            stack = ruleset.stacks[operand]
+            history = ruleset.stack_histories[operand]
+
+            if operator == "push":
+                stack.append(str(tree))
+                history.append((operator, str(tree)))
+            elif operator == "pop":
+                value = stack.pop()
+                history.append((operator, value))
+            else:
+                raise GrammarException(f"Unknown executor operator '{operator}'")
 
     def __str__(self) -> str:
         return self._to_string() + self._modifiers_to_str()
@@ -97,11 +115,43 @@ class RuleOption(ABC):
     def _generate_python_code(self) -> str:
         raise NotImplementedError("RuleOption._generate_python_code() must be implemented by subclasses")
 
-RuleSet = dict[str, RuleOption]
+class RuleSet:
+    def __init__(self, rules: dict[str, RuleOption], stack_names: set[str]) -> None:
+        self.rules = rules
+        self.stacks = dict(map(lambda name : (name, []), stack_names))
+        self.stack_histories = dict(map(lambda name : (name, []), stack_names))
+
+    def get_checkpoint(self) -> dict[str, int]:
+        return dict(map(lambda name : (name, len(self.stack_histories[name])), self.stack_histories.keys()))
+    
+    def revert_to_checkpoint(self, checkpoint: dict[str, int]) -> None:
+        for name, index in checkpoint.items():
+            stack = self.stacks[name]
+            history = self.stack_histories[name]
+            while len(history) > index:
+                operator, value = history.pop()
+                if operator == "push":
+                    stack.pop()
+                elif operator == "pop":
+                    stack.append(value)
+                else:
+                    raise GrammarException(f"Unknown executor operator '{operator}'")
+
+    def clear_stacks(self) -> None:
+        for stack in self.stacks.values():
+            stack.clear()
+        for history in self.stack_histories.values():
+            history.clear()
+
+    def stacks_are_empty(self) -> bool:
+        for stack in self.stacks.values():
+            if len(stack) > 0:
+                return False
+        return True
 
 class RuleOptionList(RuleOption):
-    def __init__(self, options: list[RuleOption] = [], inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
-        super().__init__(inverted, quantifier, omit_match)
+    def __init__(self, options: list[RuleOption] = [], **kwargs) -> None:
+        super().__init__(**kwargs)
         self.options: list[RuleOption] = list(options)
 
     def _generate_python_code_option_list(self) -> str:
@@ -112,8 +162,8 @@ class RuleOptionList(RuleOption):
 
 # (...)
 class RuleOptionMatchAll(RuleOptionList):
-    def __init__(self, options: list[RuleOption] = [], inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
-        super().__init__(options, inverted, quantifier, omit_match)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
         node = ParseTreeNode()
@@ -134,8 +184,8 @@ class RuleOptionMatchAll(RuleOptionList):
 
 # [...]
 class RuleOptionMatchAny(RuleOptionList):
-    def __init__(self, options: list[RuleOption] = [], inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
-        super().__init__(options, inverted, quantifier, omit_match)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
         for option in self.options:
@@ -177,6 +227,8 @@ class RuleOptionMatchExact(RuleOption):
 
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
         if string.startswith(self.value):
+            if self.value == "pass":
+                pass
             return ParseTreeExactMatch(self.value), len(self.value)
         return None, 0
     
@@ -186,16 +238,15 @@ class RuleOptionMatchExact(RuleOption):
     def _generate_python_code(self) -> str:
         return f"RuleOptionMatchExact(\"{escape_string(self.value)}\", {self._modifiers_to_arg_str()})"
 
-# rulename
 class RuleOptionMatchRule(RuleOption):
     def __init__(self, rulename: str, inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
         super().__init__(inverted, quantifier, omit_match)
         self.rulename = rulename
 
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
-        if self.rulename not in ruleset:
+        if self.rulename not in ruleset.rules:
             raise GrammarException(f"Rule '{self.rulename}' not found")
-        rule = ruleset[self.rulename]
+        rule = ruleset.rules[self.rulename]
         tree, length = rule.match(string, ruleset)
         if tree is not None and not rule.anonymous:
             tree.name = self.rulename
@@ -207,9 +258,34 @@ class RuleOptionMatchRule(RuleOption):
     def _generate_python_code(self) -> str:
         return f"RuleOptionMatchRule(\"{escape_string(self.rulename, True)}\", {self._modifiers_to_arg_str()})"
 
+class RuleOptionStackMatchExact(RuleOption):
+    def __init__(self, name: str, index: int, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.name = name
+        self.index = index
+
+    def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
+        if not self.name in ruleset.stacks:
+            raise GrammarException(f"Stack '{self.name}' not found")
+        stack = ruleset.stacks[self.name]
+        if self.index >= len(stack):
+            to_match = ""
+        else:
+            to_match = ruleset.stacks[self.name][-self.index-1]
+
+        if string.startswith(to_match):
+            return ParseTreeExactMatch(to_match), len(to_match)
+        return None, 0
+    
+    def _to_string(self) -> str:
+        return f":{escape_string(self.name)}.{self.index}:"
+
+    def _generate_python_code(self) -> str:
+        return f"RuleOptionStackMatchExact({escape_string(self.name)}, {self.index}, {self._modifiers_to_arg_str()})"
+
 class Rule(RuleOptionMatchAny):
-    def __init__(self, name=None, anonymous=False, fuse_children=False, options=[], inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
-        super().__init__(options, inverted, quantifier, omit_match)
+    def __init__(self, name=None, anonymous=False, fuse_children=False, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.name = name
         self.anonymous = anonymous
         self.fuse_children = fuse_children
@@ -247,7 +323,3 @@ class Rule(RuleOptionMatchAny):
             else:
                 leafID = -1
             i += 1
-
-def foo():
-    ruleset = {}
-    ruleset['Grammar'] = Rule(name="Grammar", anonymous=False, fuse_children=False, options=[ RuleOptionMatchAll([ RuleOptionMatchAny([ RuleOptionMatchRule("RuleDefinition", inverted=False, quantifier="", omit_match=False), RuleOptionMatchRule("Comment", inverted=False, quantifier="", omit_match=True), RuleOptionMatchRule("Whitespace", inverted=False, quantifier="", omit_match=True), RuleOptionMatchExact("\n", inverted=False, quantifier="", omit_match=True) ], inverted=False, quantifier="*", omit_match=False) ], inverted=False, quantifier="", omit_match=False) ], inverted=False, quantifier="", omit_match=False)
