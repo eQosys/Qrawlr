@@ -20,7 +20,7 @@ class RuleOption(ABC):
 
         count = 0
         while True:
-            sub_tree, sub_length = self._match(string[length:], ruleset)
+            sub_tree, sub_length = self._apply_optional_invert(string[length:], *self._match(string[length:], ruleset))
             if sub_tree is None:
                 break
             count += 1
@@ -67,6 +67,15 @@ class RuleOption(ABC):
         args.append(f"quantifier=\"{self.quantifier}\"")
         args.append(f"omit_match={self.omit_match}")
         return ", ".join(args)
+
+    def _apply_optional_invert(self, string: str, tree: ParseTreeNode, length: int) -> (ParseTreeNode, int):
+        if not self.inverted:
+            return tree, length
+        
+        if tree is None:
+            return ParseTreeExactMatch(string[0]), 1
+        
+        return None, 0
 
     def __str__(self) -> str:
         return self._to_string() + self._modifiers_to_str()
@@ -144,10 +153,9 @@ class RuleOptionMatchRange(RuleOption):
         self.last = last
     
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
-        if len(string) == 0:
+        if len(string) == 0 or string[0] < self.first or string[0] > self.last:
             return None, 0
-        if string[0] < self.first or string[0] > self.last:
-            return None, 0
+
         return ParseTreeExactMatch(string[0]), 1
     
     def _to_string(self) -> str:

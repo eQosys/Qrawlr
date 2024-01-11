@@ -44,9 +44,7 @@ LabelDefinition:
 	"->"_ LabelName
 
 Comment(fuse):
-#	"~~" (^"\n")
-	"~~" [StringChar "\"" "\t" ]*
-
+	"~~" "\n"!*
 
 String(fuse):
 	"\""_ StringChar* "\""_
