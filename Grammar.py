@@ -4,8 +4,11 @@ from GrammarException import GrammarException
 from GrammarRule import Rule
 
 class Grammar:
-    def __init__(self, filename: str) -> None:
-        self.ruleset: dict[str, Rule] = GrammarLoader(filename).ruleset
+    def __init__(self, filename: str = None) -> None:
+        self.ruleset: dict[str, Rule] = {}
+        
+        if filename is not None:
+            self.ruleset = GrammarLoader(filename).ruleset
 
     def apply_to(self, string: str, rule: str) -> ParseTree:
         if rule not in self.ruleset:
@@ -17,6 +20,19 @@ class Grammar:
             tree.name = rule
 
         return tree
+
+    def generate_python_code(self, func_name: str = "load_grammar_grammar", add_includes: bool = True) -> str:
+        result = ""
+        if add_includes:
+            result += "from GrammarRule import Rule, RuleOption, RuleOptionMatchAll, RuleOptionMatchAny, RuleOptionMatchRange, RuleOptionMatchExact, RuleOptionMatchRule\n"
+        result += f"def {func_name}() -> dict[str, Rule]:\n"
+        result += "    ruleset: dict[str, Rule] = {}\n"
+        for name, rule in self.ruleset.items():
+            result += f"    ruleset['{name}'] = {rule._generate_python_code()}\n"
+
+        result += "    return ruleset\n"
+
+        return result
 
     def __str__(self) -> str:
         result = ""
@@ -30,4 +46,3 @@ class Grammar:
                 name += "(" + " ".join(modifiers) + ")"
             result += f"{name}: {rule}\n"
         return result
-        return "\n".join([f"{'~' if v.anonymous else ''}{k}: {v}" for k, v in self.ruleset.items()])

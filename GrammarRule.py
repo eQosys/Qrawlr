@@ -9,10 +9,10 @@ QUANTIFIER_ONE_OR_MORE = "+"
 QUANTIFIER_ONE = ""
 
 class RuleOption(ABC):
-    def __init__(self) -> None:
-        self.inverted = False
-        self.quantifier = QUANTIFIER_ONE
-        self.omit_match = False
+    def __init__(self, inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+        self.inverted = inverted
+        self.quantifier = quantifier
+        self.omit_match = omit_match
 
     def match(self, string: str, ruleset: dict[str, "RuleOption"]) -> (ParseTreeNode, int):
         tree = ParseTreeNode()
@@ -48,6 +48,29 @@ class RuleOption(ABC):
 
         return tree, length
 
+    def _modifiers_to_str(self) -> str:
+        mod_str = ""
+
+        if self.inverted:
+            mod_str += "!"
+
+        mod_str += self.quantifier
+
+        if self.omit_match:
+            mod_str += "_"
+
+        return mod_str
+    
+    def _modifiers_to_arg_str(self) -> str:
+        args = []
+        args.append(f"inverted={self.inverted}")
+        args.append(f"quantifier=\"{self.quantifier}\"")
+        args.append(f"omit_match={self.omit_match}")
+        return ", ".join(args)
+
+    def __str__(self) -> str:
+        return self._to_string() + self._modifiers_to_str()
+
     @abstractmethod
     def _match(self, string: str, ruleset: dict[str, "RuleOption"]) -> (ParseTree, int):
         raise NotImplementedError("RuleOption._match() must be implemented by subclasses")
@@ -56,30 +79,27 @@ class RuleOption(ABC):
     def _to_string(self) -> str:
         raise NotImplementedError("RuleOption.__to_string() must be implemented by subclasses")
 
-    def __str__(self) -> str:
-        modifier_str = ""
-
-        if self.inverted:
-            modifier_str += "!"
-
-        modifier_str += self.quantifier
-
-        if self.omit_match:
-            modifier_str += "_"
-
-        return self._to_string() + modifier_str
+    @abstractmethod
+    def _generate_python_code(self) -> str:
+        raise NotImplementedError("RuleOption._generate_python_code() must be implemented by subclasses")
 
 RuleSet = dict[str, RuleOption]
 
 class RuleOptionList(RuleOption):
-    def __init__(self) -> None:
-        super().__init__()
-        self.options: list[RuleOption] = []
+    def __init__(self, options: list[RuleOption] = [], inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+        super().__init__(inverted, quantifier, omit_match)
+        self.options: list[RuleOption] = list(options)
+
+    def _generate_python_code_option_list(self) -> str:
+        optionStrs = []
+        for option in self.options:
+            optionStrs.append(option._generate_python_code())
+        return f"[ {', '.join(optionStrs)} ]"
 
 # (...)
 class RuleOptionMatchAll(RuleOptionList):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, options: list[RuleOption] = [], inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+        super().__init__(options, inverted, quantifier, omit_match)
 
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
         node = ParseTreeNode()
@@ -94,11 +114,14 @@ class RuleOptionMatchAll(RuleOptionList):
     
     def _to_string(self) -> str:
         return f"({' '.join([str(o) for o in self.options])})"
+    
+    def _generate_python_code(self) -> str:
+        return f"RuleOptionMatchAll({self._generate_python_code_option_list()}, {self._modifiers_to_arg_str()})"
 
 # [...]
 class RuleOptionMatchAny(RuleOptionList):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, options: list[RuleOption] = [], inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+        super().__init__(options, inverted, quantifier, omit_match)
 
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
         for option in self.options:
@@ -109,11 +132,14 @@ class RuleOptionMatchAny(RuleOptionList):
     
     def _to_string(self) -> str:
         return f"[{' '.join([str(o) for o in self.options])}]"
+    
+    def _generate_python_code(self) -> str:
+        return f"RuleOptionMatchAny({self._generate_python_code_option_list()}, {self._modifiers_to_arg_str()})"
 
 # 'xx'
 class RuleOptionMatchRange(RuleOption):
-    def __init__(self, first: str, last: str) -> None:
-        super().__init__()
+    def __init__(self, first: str, last: str, inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+        super().__init__(inverted, quantifier, omit_match)
         self.first = first
         self.last = last
     
@@ -127,10 +153,13 @@ class RuleOptionMatchRange(RuleOption):
     def _to_string(self) -> str:
         return f"'{self.first}{self.last}'"
 
+    def _generate_python_code(self) -> str:
+        return f"RuleOptionMatchRange(\"{escape_string(self.first, True)}\", \"{escape_string(self.last, True)}\", {self._modifiers_to_arg_str()})"
+
 # "..."
 class RuleOptionMatchExact(RuleOption):
-    def __init__(self, value: str) -> None:
-        super().__init__()
+    def __init__(self, value: str, inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+        super().__init__(inverted, quantifier, omit_match)
         self.value = value
 
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
@@ -140,12 +169,15 @@ class RuleOptionMatchExact(RuleOption):
     
     def _to_string(self) -> str:
         return f"\"{escape_string(self.value, False)}\""
+    
+    def _generate_python_code(self) -> str:
+        return f"RuleOptionMatchExact(\"{escape_string(self.value)}\", {self._modifiers_to_arg_str()})"
 
 # rulename
 class RuleOptionMatchRule(RuleOption):
-    def __init__(self, reference: str) -> None:
-        super().__init__()
-        self.rulename = reference
+    def __init__(self, rulename: str, inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+        super().__init__(inverted, quantifier, omit_match)
+        self.rulename = rulename
 
     def _match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
         if self.rulename not in ruleset:
@@ -158,13 +190,16 @@ class RuleOptionMatchRule(RuleOption):
     
     def _to_string(self) -> str:
         return self.rulename
+    
+    def _generate_python_code(self) -> str:
+        return f"RuleOptionMatchRule(\"{escape_string(self.rulename, True)}\", {self._modifiers_to_arg_str()})"
 
 class Rule(RuleOptionMatchAny):
-    def __init__(self) -> None:
-        super().__init__()
-        self.name = None
-        self.anonymous = False
-        self.fuse_children = False
+    def __init__(self, name=None, anonymous=False, fuse_children=False, options=[], inverted: bool = False, quantifier: str = QUANTIFIER_ONE, omit_match: bool = False) -> None:
+        super().__init__(options, inverted, quantifier, omit_match)
+        self.name = name
+        self.anonymous = anonymous
+        self.fuse_children = fuse_children
 
     def match(self, string: str, ruleset: RuleSet) -> (ParseTree, int):
         tree, length = super().match(string, ruleset)
@@ -172,6 +207,14 @@ class Rule(RuleOptionMatchAny):
             self.__fuse_children(tree)
         return tree, length
     
+    def _generate_python_code(self) -> str:
+        args = []
+        args.append(f"name=\"{escape_string(self.name, True)}\"")
+        args.append(f"anonymous={self.anonymous}")
+        args.append(f"fuse_children={self.fuse_children}")
+        args.append(f"options={self._generate_python_code_option_list()}")
+        return f"Rule({', '.join(args)}, {self._modifiers_to_arg_str()})"
+
     def __fuse_children(self, tree: ParseTreeNode) -> None:
         if tree is None:
             return
@@ -191,3 +234,7 @@ class Rule(RuleOptionMatchAny):
             else:
                 leafID = -1
             i += 1
+
+def foo():
+    ruleset = {}
+    ruleset['Grammar'] = Rule(name="Grammar", anonymous=False, fuse_children=False, options=[ RuleOptionMatchAll([ RuleOptionMatchAny([ RuleOptionMatchRule("RuleDefinition", inverted=False, quantifier="", omit_match=False), RuleOptionMatchRule("Comment", inverted=False, quantifier="", omit_match=True), RuleOptionMatchRule("Whitespace", inverted=False, quantifier="", omit_match=True), RuleOptionMatchExact("\n", inverted=False, quantifier="", omit_match=True) ], inverted=False, quantifier="*", omit_match=False) ], inverted=False, quantifier="", omit_match=False) ], inverted=False, quantifier="", omit_match=False)

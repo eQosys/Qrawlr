@@ -60,7 +60,6 @@ def evaluate_expression(tree: ParseTree):
 
 def run_test(grammarfile: str, entry_rule: str, text: str):
     g = Grammar(grammarfile)
-    print(str(g))
 
     tree = g.apply_to(text, entry_rule)
 
@@ -84,7 +83,7 @@ def test_algebra():
 
     result = evaluate_expression(tree)
 
-    print(f"{expression} = {result}")
+    print(f"INFO: {expression} = {result}")
 
 def test_grammar():
     with open("grammars/grammar_grammar.txt", "r") as f:
@@ -104,11 +103,30 @@ def test_qinp():
 
     run_test("grammars/qinp_grammar.txt", "Code", text)
 
+def test_code_generation():
+    g = Grammar("grammars/grammar_grammar.txt")
+    pre_str = str(g)
+
+    exec(g.generate_python_code("this_is_a_test_code_name"), globals())
+    g = Grammar()
+    g.ruleset = this_is_a_test_code_name()
+    post_str = str(g)
+
+    if pre_str == post_str:
+        print("ERROR: Grammar strings do not match")
+        print("Pre:")
+        print(" ", pre_str.replace("\n", "\n  "))
+        print("Post:")
+        print(" ", post_str.replace("\n", "\n  "))
+    else:
+        print("INFO: Grammar strings match")
+
 if __name__ == "__main__":
     try:
-        test_algebra()
+        #test_algebra()
         #test_qism()
         #test_grammar()
         #test_qinp()
+        test_code_generation()
     except GrammarException as e:
         print(f"Error: {e}")
