@@ -1,9 +1,14 @@
 from GrammarException import GrammarException
 from GrammarRule import *
 
+NAME_TYPE_RULE = "Rule name"
+NAME_TYPE_OPTIONAL = "Optional name"
+NAME_TYPE_STACK = "Stack name"
+
 class GrammarLoader:
     def __init__(self, filename: str) -> None:
         self.filename: str = filename
+        self.optional_names = set[str]()
         self.__load_lines()
         self.__load_rules()
         self.__check_for_unknown_references()
@@ -37,6 +42,19 @@ class GrammarLoader:
 
         self.ruleset = RuleSet(self.rules, self.stack_names)
 
+    def __check_if_name_exists(self, name: str, name_type: str, col: int, exclude_own_type: bool = False) -> None:
+        namesets = (
+            (NAME_TYPE_RULE, self.rules.keys()),
+            (NAME_TYPE_OPTIONAL, self.optional_names),
+            (NAME_TYPE_STACK, self.stack_names)
+        )
+
+        for other_type, names in namesets:
+            if exclude_own_type and name_type == other_type:
+                continue
+            if name in names:
+                raise self.__make_exception(f"{name_type} '{name}' already exists as {other_type.lower()}", col)
+
     def __check_for_unknown_references(self) -> None:
         err_msgs = []
         for name, references in self.__referenced_rules.items():
@@ -57,6 +75,8 @@ class GrammarLoader:
         line = self.__get_next_line()
 
         rule.name, col = self.__get_parse_identifier(line, 0)
+        self.__check_if_name_exists(rule.name, NAME_TYPE_RULE, col)
+        self.rules[rule.name] = None
         rule.anonymous, rule.fuse_children, line, col = self.__get_parse_rule_definition_header_modifiers(line, col)
 
         if line[col] != ":":
@@ -261,8 +281,9 @@ class GrammarLoader:
         return RuleOptionMatchExact(value), col+1
     
     def __get_parse_stack_match_exact(self, line: str, col: int) -> (RuleOptionStackMatchExact, int):
-        #print(line)
         name, col = self.__get_parse_identifier(line, col)
+        self.__check_if_name_exists(name, NAME_TYPE_STACK, col, True)
+        self.stack_names.add(name)
 
         if line[col] != ".":
             raise self.__make_exception("Expected '.'", col)
@@ -289,7 +310,9 @@ class GrammarLoader:
     def __parse_rule_option_modifiers(self, line: str, col: int, option: RuleOption) -> int:
         option.inverted, col = self.__get_parse_rule_option_modifier_inverted(line, col)
         option.quantifier, col = self.__get_parse_rule_option_modifier_quantifier(line, col)
+        option.look_ahead, col = self.__get_parse_rule_option_modifier_look_ahead(line, col)
         option.omit_match, col = self.__get_parse_rule_option_modifier_omit_match(line, col)
+        option.alt_name, col = self.__get_parse_rule_option_modifier_optional_name(line, col)
         return col
 
     def __parse_rule_option_executors(self, line: str, col: int, option: RuleOption) -> int:
@@ -335,10 +358,26 @@ class GrammarLoader:
             return QUANTIFIER_ONE, col+1
         return QUANTIFIER_ONE, col
     
+    def __get_parse_rule_option_modifier_look_ahead(self, line: str, col: int) -> (bool, int):
+        if col < len(line) and line[col] == "~":
+            return True, col+1
+        return False, col
+    
     def __get_parse_rule_option_modifier_omit_match(self, line: str, col: int) -> (bool, int):
         if col < len(line) and line[col] == "_":
             return True, col+1
         return False, col
+    
+    def __get_parse_rule_option_modifier_optional_name(self, line: str, col: int) -> (bool, int):
+        if col >= len(line) or line[col] != "@":
+            return "", col
+        col += 1
+
+        name, col = self.__get_parse_identifier(line, col)
+        self.__check_if_name_exists(name, NAME_TYPE_OPTIONAL, col, True)
+        self.optional_names.add(name)
+
+        return name, col
 
     def __parse_whitespace(self, line: str, col: int, optional: bool) -> int:
         begin = col

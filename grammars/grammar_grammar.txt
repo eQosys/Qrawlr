@@ -86,7 +86,7 @@ EscapeChar(hidden):
 	"\\" [ "\"" "\\" "n" "t" ]
 
 SpecialChar(hidden):
-	[' !' '#/' ':@' '[`' '{~']
+	[ ' !' '#/' ':@' '[`' '{~' ]
 
 Comment:
 	"#" "\n"!*

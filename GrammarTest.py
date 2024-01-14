@@ -65,12 +65,14 @@ def run_test(grammarfile: str, entry_rule: str, text: str):
     g = Grammar(grammarfile)
 
     tree = g.apply_to(text, entry_rule)
-
-    if tree is None:
-        raise GrammarException("Could not parse text")
     
-    if tree.length < len(text):
+    if tree is None or tree.length < len(text):
+        print(f"Max index: {g.ruleset.farthest_match_index}")
+        print(f"Remaining text: {repr(text[g.ruleset.farthest_match_index:][:32])}")
         print("WARN: Text was not fully parsed")
+
+        if tree is None:
+            raise GrammarException("Could not parse text")
     else:
         print("INFO: Fully parsed text")
 

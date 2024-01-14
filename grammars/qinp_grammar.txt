@@ -1,79 +1,43 @@
-# ---------------- GLOBAL ----------------
+# ---------------- GLOBAL CODE ----------------
 
 GlobalCode:
-    GlobalCodeLine ( Newline_ GlobalCodeLine )*
+    GlobalCodeLine ( Newline_ GlobalCodeLine? )*
 
-GlobalCodeLine(hidden):
-    GlobalStatement? SingleLineComment?
+GlobalCodeLine:
+    GlobalCodeStatement
 
-GlobalStatement(hidden):
-    Pass
+GlobalCodeStatement(hidden):
     Import
+    Pass
     SpaceDefinition
 
-# ---------------- IDENTIFIER ----------------
+# ---------------- PASS ----------------
 
-Identifier(fuse):
-    IdentifierFirstChar IdentifierChar*
-
-IdentifierFirstChar(hidden):
-    [ 'az' 'AZ' "_" ]
-
-IdentifierChar(hidden):
-    [IdentifierFirstChar '09' ]
+Pass:
+    "pass"_
 
 # ---------------- IMPORT ----------------
 
 Import:
-    "import"_ ImportModifiers Whitespace_ StringLiteral
+    "import"_ ( "."_ Identifier )*@ImportModifiers Whitespace_ StringLiteral@ImportPath
 
-ImportModifiers:
-    ( "."_ Identifier)*
-
-# ---------------- SPACE ----------------
+# ---------------- SPACE DEFINITION ----------------
 
 SpaceDefinition:
-    "space"_ Whitespace_ Identifier ":"_ Whitespace?_ Newline_ SpaceBody
+    SpaceHeader Newline_ IndentationIncrease_ SpaceBody IndentationDecrease_
+
+SpaceHeader:
+    "space"_ Whitespace_ Identifier ":"_
 
 SpaceBody:
-    IndentationIncrease_ SpaceBodyLine ( Newline_ [ ( IndentationCurrent_ SpaceBodyLine ) SingleLineComment ] )* IndentationDecrease_
+    SpaceBodyLine ( Newline_ IndentationCurrent_ SpaceBodyLine )*
 
-SpaceBodyLine(hidden):
-    SpaceStatement? SingleLineComment?
+SpaceBodyLine:
+    SpaceBodyStatement
 
-SpaceStatement(hidden):
+SpaceBodyStatement(hidden):
     Pass
     SpaceDefinition
-
-# ---------------- WHITESPACE ----------------
-
-Whitespace:
-    WhitespaceChar+
-
-WhitespaceChar:
-    [ " " "\t"]
-
-Newline:
-    "\n"
-
-# ---------------- LITERALS ----------------
-
-StringLiteral:
-    "\"" StringChar* "\""
-
-StringChar:
-    [ "\\\\" "\\\"" "\""! ]
-
-# ---------------- VERBOSE ----------------
-
-Pass:
-    "pass"_
-Break:
-    "break"_
-Continue:
-    "continue"_
-#Return:
-#    "return"_ Expression?
 
 # ---------------- INDENTATION ----------------
 
@@ -86,6 +50,60 @@ IndentationIncrease:
 IndentationDecrease:
     ""{ pop IndentationStack }
 
+# ---------------- IDENTIFIER ----------------
+
+Identifier(fuse):
+    IdentifierCharFirst IdentifierCharRemaining*
+
+IdentifierCharFirst(hidden):
+    'az'
+    'AZ'
+    "_"
+
+IdentifierCharRemaining(hidden):
+    IdentifierCharFirst
+    '09'
+
+# ---------------- LITERALS ----------------
+
+StringLiteral(fuse):
+    "\""_ StringLiteralChar* "\""_
+
+StringLiteralChar(hidden):
+    "\\\\"
+    "\\\""
+    "\""!
+
 # ---------------- COMMENTS ----------------
-SingleLineComment(fuse):
-    Whitespace?_ "\\\\" "\n"!*
+
+CommentChain(hidden):
+    Comment ( Newline_ Comment )*
+
+Comment:
+    CommentSingleLine
+    CommentMultiLine
+
+CommentSingleLine(hidden fuse):
+    Whitespace?_ "\\\\" Newline!*
+
+CommentMultiLine(hidden fuse):
+    Whitespace?_ "\\*" "*\\"!* "*\\"
+
+# ---------------- MISCELLANEOUS ----------------
+
+AlphaChar(hidden):
+    'az'
+    'AZ'
+
+NumChar(hidden):
+    '09'
+
+AlnumChar(hidden):
+    AlphaChar
+    NumChar
+
+Newline(hidden):
+    "\n"
+
+Whitespace(fuse):
+    [ " " "\t" ]+

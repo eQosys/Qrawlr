@@ -51,7 +51,7 @@ class ParseTreeExactMatch(ParseTree):
         self.length = len(value)
 
     def _to_digraph(self, dot: graphviz.Digraph) -> str:
-        dot.node(str(self.id), f"\"{escape_string(self.value, True)}\":{self.id}")
+        dot.node(str(self.id), f"\"{escape_string(self.value)}\":{self.id}")
 
     def __str__(self) -> str:
         return f"{self.value}"
