@@ -99,7 +99,7 @@ def test_grammar():
     with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/grammar_grammar.txt", "Grammar", text, filename)
+    run_test("grammars/grammar_grammar.txt", "Grammar", text, filename, verbose = False)
 
 def test_qism():
     filename = "test_files/bootloader.qsm"
@@ -116,7 +116,7 @@ def test_qinp():
     run_test("grammars/qinp_grammar.txt", "GlobalCode", text, filename, verbose = True)
 
 def test_code_generation():
-    g = Grammar("grammars/qism_grammar.txt")
+    g = Grammar("grammars/grammar_grammar.txt")
     pre_str = str(g)
 
     exec(g.generate_python_code("load_dynamic_grammar"), globals())

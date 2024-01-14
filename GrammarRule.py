@@ -216,6 +216,23 @@ class RuleOptionList(RuleOption):
             optionStrs.append(option._generate_python_code())
         return f"[ {', '.join(optionStrs)} ]"
 
+# .
+class RuleOptionMatchAnyChar(RuleOption):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    def _match_specific(self, string: str, index: int, ruleset: RuleSet) -> tuple[ParseTree, int]:
+        if index >= len(string):
+            return None, index
+
+        return ParseTreeExactMatch(string[index], *index_to_line_and_column(string, index)), index+1
+
+    def _to_string(self) -> str:
+        return "."
+    
+    def _generate_python_code(self) -> str:
+        return f"RuleOptionMatchAnyChar({self._initializers_to_arg_str()})"
+
 # (...)
 class RuleOptionMatchAll(RuleOptionList):
     def __init__(self, *args, **kwargs) -> None:

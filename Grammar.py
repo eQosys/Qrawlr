@@ -31,7 +31,11 @@ class Grammar:
         if add_includes:
             result += "from Grammar import Grammar\n"
             result += "from GrammarRule import RuleOptionInitializers, RuleSet\n"
-            result += "from GrammarRule import Rule, RuleOptionMatchAll, RuleOptionMatchAny, RuleOptionMatchRange, RuleOptionMatchExact, RuleOptionMatchRule, RuleOptionStackMatchExact\n"
+            result += "from GrammarRule import Rule, RuleOptionMatchAnyChar\n"
+            result += "from GrammarRule import RuleOptionMatchAll, RuleOptionMatchAny\n"
+            result += "from GrammarRule import RuleOptionMatchRange, RuleOptionMatchExact\n"
+            result += "from GrammarRule import RuleOptionMatchRule, RuleOptionStackMatchExact\n"
+
         result += f"def {func_name}() -> Grammar:\n"
 
         result += "    rules: dict[str, Rule] = {}\n"

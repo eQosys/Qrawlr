@@ -1,92 +1,117 @@
+# ---------------- GRAMMAR ----------------
+
 Grammar:
-	[ RuleDefinition Comment_ Whitespace_ "\n"_ ]*
+	GrammarLine ("\n"_ GrammarLine)*
+
+GrammarLine(hidden):
+	RuleDefinition Comment?
+	Comment
+	Whitespace?_ "\n"~_
+
+# ---------------- RULE DEFINITION ----------------
 
 RuleDefinition:
-	RuleHeader RuleBody
+	RuleHeader (Newline Whitespace)?_ RuleBody
 
 RuleHeader:
-	RuleName ("("_ RuleModifierList ")"_)? ":\n"_
-
-RuleName(fuse):
-	AlphaChar AlnumChar*
-
-RuleModifierList(hidden):
-	RuleModifier (" "_ RuleModifier)*
-
-RuleModifier(hidden):
-	RuleModifierHidden
-	RuleModifierFuse
-
-RuleModifierHidden:
-	"hidden"_
-
-RuleModifierFuse:
-	"fuse"_
+	Identifier RuleModifierList?_ ":"_
 
 RuleBody:
-	(Whitespace_ RuleOptionDefinition "\n"_)+
+	RuleOptionDefinition (Newline Whitespace?_ RuleOptionDefinition)*
 
-Whitespace:
-	[ " " "\t" ]+
+# ---------------- RULE MODIFIERS ----------------
 
-RuleOptionDefinition(hidden):
+RuleModifierList(hidden):
+	"("_ RuleModifier (Whitespace_ RuleModifier)* ")"_
+
+RuleModifier:
+	"hidden"
+	"fuse"
+
+# ---------------- RULE OPTION ----------------
+
+RuleOptionDefinition:
 	RuleOption (Whitespace?_ RuleOption)*
 
 RuleOption:
-	RuleOptionMatchAll   RuleOptionModifiers
-	RuleOptionMatchAny   RuleOptionModifiers
-	RuleOptionMatchRange RuleOptionModifiers
-	RuleOptionMatchExact RuleOptionModifiers
-	RuleOptionMatchRule  RuleOptionModifiers
+	Matcher RuleOptionModifiers
+
+# ---------------- OPTION MODIFIERS ----------------
 
 RuleOptionModifiers(hidden):
-	RuleOptionInvert? RuleOptionQuantifier? RuleOptionOmitMatch?
+	OptionModifierInvert? OptionModifierQuantifier? OptionModifierLookAhead? OptionModifierOmitMatch? OptionModifierAltName?
 
-RuleOptionInvert:
+OptionModifierInvert:
 	"!"_
 
-RuleOptionQuantifier:
+OptionModifierQuantifier:
 	[ "?" "*" "+" ]
 
-RuleOptionOmitMatch:
+OptionModifierLookAhead:
+	"~"_
+
+OptionModifierOmitMatch:
 	"_"_
 
-RuleOptionMatchAll:
-	"("_ "^"? Whitespace?_ RuleOptionDefinition Whitespace?_ ")"_
+OptionModifierAltName:
+	"@"_ Identifier
 
-RuleOptionMatchAny:
+# ---------------- MATCHERS ----------------
+
+Matcher(hidden):
+	MatchAnyChar
+	MatchAll
+	MatchAny
+	MatchRange
+	MatchExact
+	MatchRule
+
+MatchAnyChar:
+	"."
+
+MatchAll(fuse):
+	"("_ Whitespace?_ RuleOptionDefinition Whitespace?_ ")"_
+
+MatchAny:
 	"["_ "^"? Whitespace?_ RuleOptionDefinition Whitespace?_ "]"_
 
-RuleOptionMatchRange:
-	"'"_ MatchRangeChars MatchRangeChars "'"_
+MatchRange:
+	"'"_ MatchRangeChar MatchRangeChar "'"_
 
-MatchRangeChars(hidden):
-	AlnumChar
-	EscapeChar
-	SpecialChar
-
-RuleOptionMatchExact(fuse):
+MatchExact(fuse):
 	"\""_ [ "\\\\" "\\\"" "\""! ]+ "\""_
 
-RuleOptionMatchRule:
-	RuleName
+MatchRule:
+	Identifier
 
-AlnumChar(hidden):
-	AlphaChar
-	NumChar
+# ---------------- IDENTIFIER ----------------
+
+Identifier(fuse):
+	AlphaChar AlnumChar*
+
+# ---------------- COMMENT ----------------
+
+Comment(fuse):
+	"#" "\n"!*
+
+# ---------------- MISCELLANEOUS ----------------
+
+MatchRangeChar:
+	"\\"? .
 
 AlphaChar(hidden):
-	'az'
-	'AZ'
+    'az'
+    'AZ'
 
 NumChar(hidden):
-	'09'
+    '09'
 
-EscapeChar(hidden):
-	"\\" [ "\"" "\\" "n" "t" ]
+AlnumChar(hidden):
+    AlphaChar
+    NumChar
 
-SpecialChar(hidden):
-	[ ' !' '#/' ':@' '[`' '{~' ]
+Newline(hidden):
+    "\n"
 
-Comment:
-	"#" "\n"!*
+Whitespace(fuse):
+    [ " " "\t" ]+

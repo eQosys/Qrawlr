@@ -174,7 +174,9 @@ class GrammarLoader:
         return rule_options
 
     def __get_parse_rule_option(self, line: str, col: int) -> (RuleOption, int):      
-        if line[col] == "(":
+        if line[col] == ".":
+            option, col = self.__get_parse_rule_option_match_any_char(line, col+1)
+        elif line[col] == "(":
             option, col = self.__get_parse_rule_option_match_all(line, col+1)
         elif line[col] == "[":
             option, col = self.__get_parse_rule_option_match_any(line, col+1)
@@ -197,7 +199,10 @@ class GrammarLoader:
         col = self.__parse_whitespace(line, col, True)
 
         return option, col
-        
+    
+    def __get_parse_rule_option_match_any_char(self, line: str, col: int) -> (RuleOptionMatchAnyChar, int):
+        return RuleOptionMatchAnyChar(), col
+
     def __get_parse_rule_option_match_all(self, line: str, col: int) -> (RuleOptionMatchAll, int):
         option = RuleOptionMatchAll()
 
