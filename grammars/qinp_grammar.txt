@@ -19,7 +19,7 @@ Pass:
 # ---------------- IMPORT ----------------
 
 Import:
-    "import"_ ( "."_ Identifier )*@ImportModifiers Whitespace_ StringLiteral@ImportPath
+    "import"_ ( "."_ Identifier )*->ImportModifiers Whitespace_ StringLiteral->ImportPath
 
 # ---------------- SPACE DEFINITION ----------------
 

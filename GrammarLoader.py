@@ -114,6 +114,32 @@ class GrammarLoader:
             raise self.__make_exception("Expected integer", begin)
         
         return int(value), col
+    
+    def __get_parse_literal_string(self, line: str, col: int) -> (str, int):
+        begin = col
+
+        ESCAPE_CHARS = "\"\\nt"
+
+        while col < len(line) and line[col] != "\"":
+            if line[col] == "\\":
+                col += 1
+                if col >= len(line):
+                    raise self.__make_exception("Expected character after '\\'", col)
+                if line[col] not in ESCAPE_CHARS:
+                    raise self.__make_exception("Invalid escape sequence", col)
+            col += 1
+
+        content = line[begin:col]
+
+        for c in ESCAPE_CHARS:
+            content = content.replace(f"\\{c}", eval(f"\"\\{c}\""))
+        
+        if col >= len(line) or line[col] != "\"":
+            raise self.__make_exception("Expected closing '\"'", col)
+        col += 1
+
+        return content, col
+        
 
     def __get_parse_rule_definition_header_modifiers(self, line: str, col: int) -> (bool, bool, str, int):
         anonymous = False
@@ -248,30 +274,15 @@ class GrammarLoader:
         col += 1
         if col >= len(line) or line[col] != "'":
             raise self.__make_exception("Expected closing '''", col)
+        col += 1
 
         if first >= last:
             raise self.__make_exception("Invalid range", col)
 
-        return RuleOptionMatchRange(first, last), col+1
+        return RuleOptionMatchRange(first, last), col
     
     def __get_parse_rule_option_match_exact(self, line: str, col: int) -> (RuleOptionMatchExact, int):
-        begin = col
-
-        ESCAPE_CHARS = "\"\\nt"
-
-        while col < len(line) and line[col] != "\"":
-            if col < len(line) and line[col] == "\\":
-                col += 1
-                if col >= len(line):
-                    raise self.__make_exception("Expected character after '\\'", col)
-                if line[col] not in ESCAPE_CHARS:
-                    raise self.__make_exception("Invalid escape sequence", col)
-            col += 1
-        
-        if col >= len(line):
-            raise self.__make_exception("Expected closing '\"'", col)
-
-        value = line[begin:col]
+        value, col = self.__get_parse_literal_string(line, col)
 
         # TODO: Empty strings are allowed for now
         #       but they should be disallowed, because the are "useless"
@@ -279,11 +290,8 @@ class GrammarLoader:
         #       Allowed for now, for executors to work.
         #if value == "":
         #    raise self.__make_exception("Empty string not allowed", begin)
-
-        for c in ESCAPE_CHARS:
-            value = value.replace(f"\\{c}", eval(f"\"\\{c}\""))
         
-        return RuleOptionMatchExact(value), col+1
+        return RuleOptionMatchExact(value), col
     
     def __get_parse_stack_match_exact(self, line: str, col: int) -> (RuleOptionStackMatchExact, int):
         name, col = self.__get_parse_identifier(line, col)
@@ -317,7 +325,7 @@ class GrammarLoader:
         (option.count_min, option.count_max), col = self.__get_parse_rule_option_modifier_quantifier(line, col)
         option.look_ahead, col = self.__get_parse_rule_option_modifier_look_ahead(line, col)
         option.omit_match, col = self.__get_parse_rule_option_modifier_omit_match(line, col)
-        option.alt_name, col = self.__get_parse_rule_option_modifier_alt_name(line, col)
+        option.match_repl, col = self.__get_parse_rule_option_modifier_match_replacement(line, col)
         return col
 
     def __parse_rule_option_executors(self, line: str, col: int, option: RuleOption) -> int:
@@ -332,8 +340,8 @@ class GrammarLoader:
             col = self.__parse_whitespace(line, col, False)
             
             stack_name, col = self.__get_parse_identifier(line, col)
-            col = self.__parse_whitespace(line, col, True)
             self.stack_names.add(stack_name)
+            col = self.__parse_whitespace(line, col, True)
             
             option.executors.append((exec_name, stack_name))
 
@@ -413,16 +421,26 @@ class GrammarLoader:
             return True, col+1
         return False, col
     
-    def __get_parse_rule_option_modifier_alt_name(self, line: str, col: int) -> (bool, int):
-        if col >= len(line) or line[col] != "@":
-            return "", col
-        col += 1
+    def __get_parse_rule_option_modifier_match_replacement(self, line: str, col: int) -> ((int, str), int):
+        if not line.startswith("->", col):
+            return None, col
+        col += 2
+
+        if col >= len(line):
+            raise self.__make_exception("Expected match replacement", col)
+
+        if line[col] == "\"":
+            text, col = self.__get_parse_literal_string(line, col+1)
+            return (MATCH_REPL_STRING, text), col
+        
+        if line[col] == ":":
+            rOpt, col = self.__get_parse_stack_match_exact(line, col+1)
+            return (MATCH_REPL_STACK, f"{rOpt.name}.{rOpt.index}"), col
 
         name, col = self.__get_parse_identifier(line, col)
         self.__check_if_name_exists(name, NAME_TYPE_OPTIONAL, col, True)
         self.optional_names.add(name)
-
-        return name, col
+        return (MATCH_REPL_IDENTIFIER, name), col
 
     def __parse_whitespace(self, line: str, col: int, optional: bool) -> int:
         begin = col

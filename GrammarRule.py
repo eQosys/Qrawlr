@@ -11,14 +11,18 @@ QUANTIFIER_SPECIFY_RANGE = "#"
 QUANTIFIER_SPECIFY_LOWER_BOUND = ">"
 QUANTIFIER_SPECIFY_UPPER_BOUND = "<"
 
+MATCH_REPL_IDENTIFIER = 0
+MATCH_REPL_STRING = 1
+MATCH_REPL_STACK = 2
+
 class RuleOptionInitializers:
-    def __init__(self, inverted: bool = False, count_min: int = 1, count_max: int = 1, look_ahead: bool = False, omit_match: bool = False, alt_name: str = "", executors: list[tuple[str, str]] = []) -> None:
+    def __init__(self, inverted: bool = False, count_min: int = 1, count_max: int = 1, look_ahead: bool = False, omit_match: bool = False, match_repl: (int, str) = None, executors: list[tuple[str, str]] = []) -> None:
         self.inverted      = inverted
         self.count_min     = count_min
         self.count_max     = count_max
         self.look_ahead    = look_ahead
         self.omit_match    = omit_match
-        self.alt_name      = alt_name
+        self.match_repl    = match_repl
         self.executors     = executors
 
 class RuleOption(ABC):
@@ -28,7 +32,7 @@ class RuleOption(ABC):
         self.count_max     = initializers.count_max
         self.look_ahead    = initializers.look_ahead
         self.omit_match    = initializers.omit_match
-        self.alt_name      = initializers.alt_name
+        self.match_repl    = initializers.match_repl
         self.executors     = list(initializers.executors)
 
     def match(self, string: str, index: int, ruleset: "RuleSet") -> tuple[ParseTree, int]:
@@ -58,17 +62,16 @@ class RuleOption(ABC):
             ruleset.revert_to_checkpoint(checkpoint)
             return None, old_index
 
-        self._apply_executors(tree, ruleset)
+        # TODO: Maybe 'index' should be 'index + length'?
+        if ruleset.farthest_match_index < index:
+            ruleset.farthest_match_index = index
 
         if self.look_ahead:
             index = old_index
 
-        if self.alt_name != "":
-            tree.name = self.alt_name
+        self._apply_executors(tree, ruleset)
 
-        # TODO: Maybe 'index' should be 'index + length'?
-        if ruleset.farthest_match_index < index:
-            ruleset.farthest_match_index = index
+        tree = self._apply_match_replacement(tree, string, index, ruleset)
 
         return tree, index
     
@@ -79,7 +82,7 @@ class RuleOption(ABC):
         args.append(f"count_max={self.count_max}")
         args.append(f"look_ahead={self.look_ahead}")
         args.append(f"omit_match={self.omit_match}")
-        args.append(f"alt_name=\"{escape_string(self.alt_name)}\"")
+        args.append(f"match_repl={self.match_repl}")
         args.append(f"executors={self._executors_to_arg_str()}")
         return f"initializers=RuleOptionInitializers({', '.join(args)})"
 
@@ -87,7 +90,7 @@ class RuleOption(ABC):
         executors = []
         for (operator, operand) in self.executors:
             executors.append(f"(\"{escape_string(operator)}\", \"{escape_string(operand)}\")")
-        return f"[ {', '.join(executors)} ]"
+        return f"[{', '.join(executors)}]"
 
     def _apply_optional_invert(self, string: str, index_old: int, index_new: int, tree: ParseTree) -> tuple[ParseTree, int]:
         if not self.inverted:
@@ -112,6 +115,36 @@ class RuleOption(ABC):
             else:
                 raise GrammarException(f"Unknown executor operator '{operator}'")
 
+    def _apply_match_replacement(self, tree: ParseTree, string: str, index: int, ruleset: "RuleSet") -> ParseTree:
+        if self.match_repl is not None:
+            repl_type, repl = self.match_repl
+
+            if repl_type == MATCH_REPL_STRING:
+                tree = ParseTreeExactMatch(repl, *index_to_line_and_column(string, index))
+
+            elif repl_type == MATCH_REPL_STACK:
+                stack_name, stack_index = repl.split(".")
+                stack_index = int(stack_index)
+
+                if stack_name not in ruleset.stacks:
+                    raise GrammarException(f"Stack '{stack_name}' not found")
+                
+                stack = ruleset.stacks[stack_name]
+                if stack_index < len(stack):
+                    value = stack[-stack_index-1]
+                else:
+                    value = ""
+
+                tree = ParseTreeExactMatch(value, *index_to_line_and_column(string, index))
+
+            elif repl_type == MATCH_REPL_IDENTIFIER:
+                tree.name = repl
+
+            else:
+                raise GrammarException(f"Unknown match replacement type '{repl_type}'")
+            
+        return tree
+
     def _has_modifiers(self) -> bool:
         if self.inverted:
             return True
@@ -121,7 +154,7 @@ class RuleOption(ABC):
             return True
         if self.omit_match:
             return True
-        if self.alt_name:
+        if self.match_repl:
             return True
         return False
 
@@ -129,14 +162,21 @@ class RuleOption(ABC):
         match (self.count_min, self.count_max):
             case (0, 1):
                 return QUANTIFIER_ZERO_OR_ONE
-            case (0, _):
+            case (0, -1):
                 return QUANTIFIER_ZERO_OR_MORE
             case (1, 1):
-                return QUANTIFIER_ONE
-            case (1, _):
+                return ""
+            case (1, -1):
                 return QUANTIFIER_ONE_OR_MORE
-            
-        raise GrammarException(f"Invalid count range ({self.count_min}, {self.count_max})")
+            case (minimum, maximum):
+                result = QUANTIFIER_SPECIFY_RANGE
+                if minimum == 0:
+                    result += f"{QUANTIFIER_SPECIFY_UPPER_BOUND}{maximum+1}"
+                elif maximum == -1:
+                    result += f"{QUANTIFIER_SPECIFY_LOWER_BOUND}{minimum-1}"
+                else:
+                    result += f"{minimum}-{maximum}"
+                return result
 
     def _modifiers_to_str(self) -> str:
         mod_str = ""
@@ -152,8 +192,13 @@ class RuleOption(ABC):
         if self.omit_match:
             mod_str += "_"
 
-        if self.alt_name:
-            mod_str += f"@{self.alt_name}"
+        if self.match_repl is not None:
+            mod_str += "->"
+            is_string, repl = self.match_repl
+            if is_string:
+                mod_str += f"\"{escape_string(repl)}\""
+            else:
+                mod_str += repl
 
         return mod_str
 
@@ -229,7 +274,7 @@ class RuleOptionList(RuleOption):
         optionStrs = []
         for option in self.options:
             optionStrs.append(option._generate_python_code())
-        return f"[ {', '.join(optionStrs)} ]"
+        return f"[{', '.join(optionStrs)}]"
 
 # .
 class RuleOptionMatchAnyChar(RuleOption):

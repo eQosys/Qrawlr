@@ -1,7 +1,7 @@
 # ---------------- GRAMMAR ----------------
 
 Grammar:
-	GrammarLine ("\n"_ GrammarLine)*
+	GrammarLine ( "\n"_ GrammarLine )*
 
 GrammarLine(hidden):
 	RuleDefinition Comment?
@@ -54,7 +54,7 @@ OptionModifierOmitMatch:
 	"_"_
 
 OptionModifierReplaceMatch:
-	"@"_ [ Identifier String ]
+	"->"_ [ Identifier String MatchStack ]
 
 # ---------------- OPTION EXECUTORS ----------------
 
@@ -73,6 +73,7 @@ Matcher(hidden):
 	MatchRange
 	MatchExact
 	MatchRule
+	MatchStack
 
 MatchAnyChar:
 	"."
@@ -84,13 +85,16 @@ MatchAny:
 	"["_ Whitespace?_ RuleOptionDefinition Whitespace?_ "]"_
 
 MatchRange:
-	"'"_ MatchRangeChar MatchRangeChar "'"_
+	"'"_ MatchRangeChar#2 "'"_
 
 MatchExact(fuse):
 	String
 
 MatchRule:
-	Identifier [ "^"_@InsertContent "^"!~_@DontInsertContent ]
+	Identifier [ "^"_->InsertContent "^"!~_->:asdf.0: ]
+
+MatchStack:
+	":"_ Identifier "."_ Integer ":"_
 
 # ---------------- IDENTIFIER ----------------
 
@@ -109,6 +113,9 @@ MatchRangeChar:
 
 String(fuse):
 	"\""_ StringChar* "\""_
+
+Integer:
+	NumChar+
 
 StringChar(hidden):
 	"\\\\"
@@ -130,4 +137,4 @@ Newline(hidden):
     "\n"
 
 Whitespace(fuse):
-    [ " " "\t" ]#>0
+    [ " " "\t" ]+
