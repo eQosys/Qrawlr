@@ -1,4 +1,5 @@
 from Grammar import Grammar, GrammarException
+from GrammarTools import index_to_line_and_column
 from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 
 def load_dynamic_grammar():
@@ -61,13 +62,16 @@ def evaluate_expression(tree: ParseTree):
     else:
         raise GrammarException("Expected ParseTreeNode but got", type(tree))
 
-def run_test(grammarfile: str, entry_rule: str, text: str, verbose: bool = True):
+def run_test(grammarfile: str, entry_rule: str, text: str, filename: str, verbose: bool = True):
     g = Grammar(grammarfile)
 
     tree = g.apply_to(text, entry_rule)
     
     if tree is None or tree.length < len(text):
-        print(f"Max index: {g.ruleset.farthest_match_index}")
+        print(f"Max index: {g.ruleset.farthest_match_index}", end="" if filename else "\n")
+        if filename:
+            line, col = index_to_line_and_column(text, g.ruleset.farthest_match_index)
+            print(f" -> {filename}:{line}:{col}")
         print(f"Remaining text: {repr(text[g.ruleset.farthest_match_index:][:32])}")
         print("WARN: Text was not fully parsed")
 
@@ -91,22 +95,25 @@ def test_algebra():
     print(f"INFO: {expression} = {result}")
 
 def test_grammar():
-    with open("grammars/grammar_grammar.txt", "r") as f:
+    filename = "test_files/grammar_grammar.txt"
+    with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/grammar_grammar.txt", "Grammar", text)
+    run_test("grammars/grammar_grammar.txt", "Grammar", filename, text)
 
 def test_qism():
-    with open("test_files/bootloader.qsm", "r") as f:
+    filename = "test_files/bootloader.qsm"
+    with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/qism_grammar.txt", "Code", text)
+    run_test("grammars/qism_grammar.txt", "Code", text, filename)
 
 def test_qinp():
-    with open("test_files/push_pop_test.qnp", "r") as f:
+    filename = "test_files/push_pop_test.qnp"
+    with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/qinp_grammar.txt", "GlobalCode", text, verbose = True)
+    run_test("grammars/qinp_grammar.txt", "GlobalCode", text, filename, verbose = True)
 
 def test_code_generation():
     g = Grammar("grammars/grammar_grammar.txt")
@@ -129,9 +136,9 @@ def test_code_generation():
 if __name__ == "__main__":
     try:
         #test_algebra()
-        #test_qism()
+        test_qism()
         #test_grammar()
-        test_qinp()
+        #test_qinp()
         #test_code_generation()
     except GrammarException as e:
         print(f"Error: {e}")

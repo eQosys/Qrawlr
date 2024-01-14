@@ -15,7 +15,7 @@ class Grammar:
             raise GrammarException(f"Rule '{rule}' not found")
         
         self.ruleset.reset()
-        tree, index, length = self.ruleset.rules[rule].match(string, 0, self.ruleset)
+        tree, index = self.ruleset.rules[rule].match(string, 0, self.ruleset)
 
         if tree is not None:
             tree.name = rule
