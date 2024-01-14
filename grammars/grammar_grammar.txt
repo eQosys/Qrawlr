@@ -17,7 +17,7 @@ RuleHeader:
 	Identifier RuleModifierList?_ ":"_
 
 RuleBody:
-	RuleOptionDefinition (Newline Whitespace?_ RuleOptionDefinition)*
+	RuleOptionDefinition (Newline_ Whitespace?_ RuleOptionDefinition)*
 
 # ---------------- RULE MODIFIERS ----------------
 
@@ -39,7 +39,7 @@ RuleOption:
 # ---------------- OPTION MODIFIERS ----------------
 
 RuleOptionModifiers(hidden):
-	OptionModifierInvert? OptionModifierQuantifier? OptionModifierLookAhead? OptionModifierOmitMatch? OptionModifierAltName?
+	OptionModifierInvert? OptionModifierQuantifier? OptionModifierLookAhead? OptionModifierOmitMatch? OptionModifierReplaceMatch?
 
 OptionModifierInvert:
 	"!"_
@@ -53,8 +53,8 @@ OptionModifierLookAhead:
 OptionModifierOmitMatch:
 	"_"_
 
-OptionModifierAltName:
-	"@"_ Identifier
+OptionModifierReplaceMatch:
+	"@"_ [ Identifier String ]
 
 # ---------------- OPTION EXECUTORS ----------------
 
@@ -81,16 +81,16 @@ MatchAll(fuse):
 	"("_ Whitespace?_ RuleOptionDefinition Whitespace?_ ")"_
 
 MatchAny:
-	"["_ "^"? Whitespace?_ RuleOptionDefinition Whitespace?_ "]"_
+	"["_ Whitespace?_ RuleOptionDefinition Whitespace?_ "]"_
 
 MatchRange:
 	"'"_ MatchRangeChar MatchRangeChar "'"_
 
 MatchExact(fuse):
-	"\""_ [ "\\\\" "\\\"" "\""! ]+ "\""_
+	String
 
 MatchRule:
-	Identifier
+	Identifier [ "^"_@InsertContent "^"!~_@DontInsertContent ]
 
 # ---------------- IDENTIFIER ----------------
 
@@ -107,6 +107,14 @@ Comment(fuse):
 MatchRangeChar:
 	"\\"? .
 
+String(fuse):
+	"\""_ StringChar* "\""_
+
+StringChar(hidden):
+	"\\\\"
+	"\\\""
+	"\""!
+
 AlphaChar(hidden):
     'az'
     'AZ'
@@ -122,4 +130,4 @@ Newline(hidden):
     "\n"
 
 Whitespace(fuse):
-    [ " " "\t" ]+
+    [ " " "\t" ]#>0

@@ -7,12 +7,15 @@ from GrammarTools import index_to_line_and_column
 QUANTIFIER_ZERO_OR_ONE = "?"
 QUANTIFIER_ZERO_OR_MORE = "*"
 QUANTIFIER_ONE_OR_MORE = "+"
-QUANTIFIER_ONE = ""
+QUANTIFIER_SPECIFY_RANGE = "#"
+QUANTIFIER_SPECIFY_LOWER_BOUND = ">"
+QUANTIFIER_SPECIFY_UPPER_BOUND = "<"
 
 class RuleOptionInitializers:
-    def __init__(self, inverted: bool = False, quantifier: str = QUANTIFIER_ONE, look_ahead: bool = False, omit_match: bool = False, alt_name: str = "", executors: list[tuple[str, str]] = []) -> None:
+    def __init__(self, inverted: bool = False, count_min: int = 1, count_max: int = 1, look_ahead: bool = False, omit_match: bool = False, alt_name: str = "", executors: list[tuple[str, str]] = []) -> None:
         self.inverted      = inverted
-        self.quantifier    = quantifier
+        self.count_min     = count_min
+        self.count_max     = count_max
         self.look_ahead    = look_ahead
         self.omit_match    = omit_match
         self.alt_name      = alt_name
@@ -21,7 +24,8 @@ class RuleOptionInitializers:
 class RuleOption(ABC):
     def __init__(self, initializers: RuleOptionInitializers = RuleOptionInitializers()) -> None:
         self.inverted      = initializers.inverted
-        self.quantifier    = initializers.quantifier
+        self.count_min     = initializers.count_min
+        self.count_max     = initializers.count_max
         self.look_ahead    = initializers.look_ahead
         self.omit_match    = initializers.omit_match
         self.alt_name      = initializers.alt_name
@@ -47,15 +51,12 @@ class RuleOption(ABC):
 
             tree.add_child(sub_tree, self.omit_match)
 
-            if self.quantifier == QUANTIFIER_ONE:
-                break
-            if self.quantifier == QUANTIFIER_ZERO_OR_ONE:
+            if match_count == self.count_max:
                 break
         
-        if match_count == 0:
-            if self.quantifier == QUANTIFIER_ONE or self.quantifier == QUANTIFIER_ONE_OR_MORE:
-                ruleset.revert_to_checkpoint(checkpoint)
-                return None, old_index
+        if match_count < self.count_min:
+            ruleset.revert_to_checkpoint(checkpoint)
+            return None, old_index
 
         self._apply_executors(tree, ruleset)
 
@@ -74,7 +75,8 @@ class RuleOption(ABC):
     def _initializers_to_arg_str(self) -> str:
         args = []
         args.append(f"inverted={self.inverted}")
-        args.append(f"quantifier=\"{self.quantifier}\"")
+        args.append(f"count_min={self.count_min}")
+        args.append(f"count_max={self.count_max}")
         args.append(f"look_ahead={self.look_ahead}")
         args.append(f"omit_match={self.omit_match}")
         args.append(f"alt_name=\"{escape_string(self.alt_name)}\"")
@@ -91,7 +93,7 @@ class RuleOption(ABC):
         if not self.inverted:
             return tree, index_new
         
-        if tree is None:
+        if tree is None and index_old < len(string):
             return ParseTreeExactMatch(string[index_old], *index_to_line_and_column(string, index_old)), index_old+1
         
         return None, index_old
@@ -113,7 +115,7 @@ class RuleOption(ABC):
     def _has_modifiers(self) -> bool:
         if self.inverted:
             return True
-        if self.quantifier:
+        if self.count_min != 1 or self.count_max != 1:
             return True
         if self.look_ahead:
             return True
@@ -123,13 +125,26 @@ class RuleOption(ABC):
             return True
         return False
 
+    def _count_range_to_str(self) -> str:
+        match (self.count_min, self.count_max):
+            case (0, 1):
+                return QUANTIFIER_ZERO_OR_ONE
+            case (0, _):
+                return QUANTIFIER_ZERO_OR_MORE
+            case (1, 1):
+                return QUANTIFIER_ONE
+            case (1, _):
+                return QUANTIFIER_ONE_OR_MORE
+            
+        raise GrammarException(f"Invalid count range ({self.count_min}, {self.count_max})")
+
     def _modifiers_to_str(self) -> str:
         mod_str = ""
 
         if self.inverted:
             mod_str += "!"
 
-        mod_str += self.quantifier
+        mod_str += self._count_range_to_str()
 
         if self.look_ahead:
             mod_str += "~"

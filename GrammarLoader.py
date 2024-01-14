@@ -314,7 +314,7 @@ class GrammarLoader:
 
     def __parse_rule_option_modifiers(self, line: str, col: int, option: RuleOption) -> int:
         option.inverted, col = self.__get_parse_rule_option_modifier_inverted(line, col)
-        option.quantifier, col = self.__get_parse_rule_option_modifier_quantifier(line, col)
+        (option.count_min, option.count_max), col = self.__get_parse_rule_option_modifier_quantifier(line, col)
         option.look_ahead, col = self.__get_parse_rule_option_modifier_look_ahead(line, col)
         option.omit_match, col = self.__get_parse_rule_option_modifier_omit_match(line, col)
         option.alt_name, col = self.__get_parse_rule_option_modifier_alt_name(line, col)
@@ -352,16 +352,56 @@ class GrammarLoader:
 
     def __get_parse_rule_option_modifier_quantifier(self, line: str, col: int) -> (str, int):
         if col >= len(line):
-            return QUANTIFIER_ONE, col
+            return (1, 1), col
+
         if line[col] == QUANTIFIER_ZERO_OR_ONE:
-            return QUANTIFIER_ZERO_OR_ONE, col+1
+            return (0, 1), col+1
         if line[col] == QUANTIFIER_ZERO_OR_MORE:
-            return QUANTIFIER_ZERO_OR_MORE, col+1
+            return (0, -1), col+1
         if line[col] == QUANTIFIER_ONE_OR_MORE:
-            return QUANTIFIER_ONE_OR_MORE, col+1
-        if line[col] == QUANTIFIER_ONE:
-            return QUANTIFIER_ONE, col+1
-        return QUANTIFIER_ONE, col
+            return (1, -1), col+1
+
+        if line[col] == QUANTIFIER_SPECIFY_RANGE:
+            col += 1
+
+            if col >= len(line):
+                raise self.__make_exception("Expected quantifier range", col)
+            
+            if line[col] == QUANTIFIER_SPECIFY_LOWER_BOUND:
+                col += 1
+                minimum, col = self.__get_parse_literal_integer(line, col)
+                minimum += 1
+                if minimum < 0:
+                    raise self.__make_exception("Quantifier range cannot be negative", col)
+                return (minimum, -1), col
+            if line[col] == QUANTIFIER_SPECIFY_UPPER_BOUND:
+                col += 1
+                maximum, col = self.__get_parse_literal_integer(line, col)
+                maximum -= 1
+                if maximum < 0:
+                    raise self.__make_exception("Quantifier range cannot be negative", col)
+                return (0, maximum), col
+
+            minimum, col = self.__get_parse_literal_integer(line, col)
+
+            if col < len(line) and line[col] == "-":
+                col += 1
+                maximum, col = self.__get_parse_literal_integer(line, col)
+            else:
+                maximum = minimum
+            
+            if minimum < 0 or maximum < 0:
+                raise self.__make_exception("Quantifier range cannot be negative", col)
+
+            if minimum > maximum:
+                raise self.__make_exception("Invalid quantifier range", col)
+            
+            if minimum == 0 and maximum == 0:
+                raise self.__make_exception("Quantifier range cannot be zero", col)
+            
+            return (minimum, maximum), col
+
+        return (1, 1), col
     
     def __get_parse_rule_option_modifier_look_ahead(self, line: str, col: int) -> (bool, int):
         if col < len(line) and line[col] == "~":
