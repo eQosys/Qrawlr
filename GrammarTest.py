@@ -4,15 +4,15 @@ from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 def load_dynamic_grammar():
     raise GrammarException("this_is_a_test_code_name should have been replaced by code generation")
 
-def write_tree(tree):
+def write_tree(tree: ParseTree, verbose):
     print("INFO: Writing tree to tree.gv... ", end="", flush=True)
     with open("tree.gv", "w") as f:
-        f.write(tree.to_digraph().source)
+        f.write(tree.to_digraph(verbose).source)
     print("DONE")
 
-def render_tree(tree: ParseTree):
+def render_tree(tree: ParseTree, verbose):
     print("INFO: Rendering tree to tree.pdf... ", end="", flush=True)
-    tree.to_digraph().render(format="pdf", outfile="tree.pdf")
+    tree.to_digraph(verbose).render(format="pdf", outfile="tree.pdf")
     print("DONE")
 
 def evaluate_expression(tree: ParseTree):
@@ -61,7 +61,7 @@ def evaluate_expression(tree: ParseTree):
     else:
         raise GrammarException("Expected ParseTreeNode but got", type(tree))
 
-def run_test(grammarfile: str, entry_rule: str, text: str):
+def run_test(grammarfile: str, entry_rule: str, text: str, verbose: bool = True):
     g = Grammar(grammarfile)
 
     tree = g.apply_to(text, entry_rule)
@@ -76,8 +76,8 @@ def run_test(grammarfile: str, entry_rule: str, text: str):
     else:
         print("INFO: Fully parsed text")
 
-    write_tree(tree)
-    render_tree(tree)
+    write_tree(tree, verbose)
+    render_tree(tree, verbose)
 
     return tree
 
@@ -106,7 +106,7 @@ def test_qinp():
     with open("test_files/push_pop_test.qnp", "r") as f:
         text = f.read()
 
-    run_test("grammars/qinp_grammar.txt", "GlobalCode", text)
+    run_test("grammars/qinp_grammar.txt", "GlobalCode", text, True)
 
 def test_code_generation():
     g = Grammar("grammars/grammar_grammar.txt")

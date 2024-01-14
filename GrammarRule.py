@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from GrammarParseTree import *
 from GrammarException import *
+from GrammarTools import index_to_line_and_column
 
 QUANTIFIER_ZERO_OR_ONE = "?"
 QUANTIFIER_ZERO_OR_MORE = "*"
@@ -32,7 +33,7 @@ class RuleOption(ABC):
                 pass
 
         old_index = index
-        tree = ParseTreeNode()
+        tree = ParseTreeNode(*index_to_line_and_column(string, index))
         length = 0
         match_count = 0
         checkpoint = ruleset.get_checkpoint()
@@ -105,7 +106,7 @@ class RuleOption(ABC):
             return tree, index_new, length
         
         if tree is None:
-            return ParseTreeExactMatch(string[index_old]), index_old + 1, 1
+            return ParseTreeExactMatch(string[index_old], *index_to_line_and_column(string, index_old)), index_old+1, 1
         
         return None, index_old, 0
 
@@ -192,7 +193,7 @@ class RuleOptionMatchAll(RuleOptionList):
 
     def _match_specific(self, string: str, index: int, ruleset: RuleSet) -> tuple[ParseTree, int, int]:
         old_index = index
-        node = ParseTreeNode()
+        node = ParseTreeNode(*index_to_line_and_column(string, index))
         length = 0
         for option in self.options:
             child, index, child_length = option.match(string, index, ruleset)
@@ -237,7 +238,7 @@ class RuleOptionMatchRange(RuleOption):
         if index >= len(string) or string[index] < self.first or string[index] > self.last:
             return None, index, 0
 
-        return ParseTreeExactMatch(string[index]), index+1, 1
+        return ParseTreeExactMatch(string[index], *index_to_line_and_column(string, index)), index+1, 1
     
     def _to_string(self) -> str:
         return f"'{self.first}{self.last}'"
@@ -256,7 +257,7 @@ class RuleOptionMatchExact(RuleOption):
             if self.value == "pass":
                 pass
             length = len(self.value)
-            return ParseTreeExactMatch(self.value), index+length, length
+            return ParseTreeExactMatch(self.value, *index_to_line_and_column(string, index)), index+length, length
         return None, index, 0
     
     def _to_string(self) -> str:
@@ -302,7 +303,7 @@ class RuleOptionStackMatchExact(RuleOption):
 
         if string.startswith(to_match, index):
             length = len(to_match)
-            return ParseTreeExactMatch(to_match), index+length, length
+            return ParseTreeExactMatch(to_match, *index_to_line_and_column(string, index)), index+length, length
         return None, index, 0
     
     def _to_string(self) -> str:
