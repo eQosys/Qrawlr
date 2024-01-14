@@ -46,8 +46,8 @@ class ParseTreeNode(ParseTree):
     def _to_digraph(self, dot: graphviz.Digraph, verbose) -> str:
         text = f"{self.name}"
         text = self._add_optional_verbose_info(text, verbose)
+        dot.node(str(self.id), text, shape="ellipse")
 
-        dot.node(str(self.id), text)
         for child in self.children:
             child._to_digraph(dot, verbose)
             dot.edge(str(self.id), str(child.id))
@@ -64,7 +64,7 @@ class ParseTreeExactMatch(ParseTree):
     def _to_digraph(self, dot: graphviz.Digraph, verbose) -> str:
         text = f"\"{escape_string(self.value)}\""
         text = self._add_optional_verbose_info(text, verbose)
-        dot.node(str(self.id), text)
+        dot.node(str(self.id), text, shape="plaintext")
 
     def __str__(self) -> str:
         return f"{self.value}"

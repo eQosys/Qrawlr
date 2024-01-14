@@ -106,7 +106,7 @@ def test_qinp():
     with open("test_files/push_pop_test.qnp", "r") as f:
         text = f.read()
 
-    run_test("grammars/qinp_grammar.txt", "GlobalCode", text, True)
+    run_test("grammars/qinp_grammar.txt", "GlobalCode", text, verbose = True)
 
 def test_code_generation():
     g = Grammar("grammars/grammar_grammar.txt")
