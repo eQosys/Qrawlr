@@ -34,7 +34,7 @@ RuleOptionDefinition:
 	RuleOption (Whitespace?_ RuleOption)*
 
 RuleOption:
-	Matcher RuleOptionModifiers
+	Matcher RuleOptionModifiers RuleOptionExecutors?
 
 # ---------------- OPTION MODIFIERS ----------------
 
@@ -55,6 +55,14 @@ OptionModifierOmitMatch:
 
 OptionModifierAltName:
 	"@"_ Identifier
+
+# ---------------- OPTION EXECUTORS ----------------
+
+RuleOptionExecutors(hidden):
+	"{"_ RuleOptionExecutor (Whitespace?_ "," Whitespace?_ RuleOptionExecutor)* "}"_
+
+RuleOptionExecutor:
+	Identifier Identifier
 
 # ---------------- MATCHERS ----------------
 
