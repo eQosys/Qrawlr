@@ -62,7 +62,7 @@ def evaluate_expression(tree: ParseTree):
     else:
         raise GrammarException("Expected ParseTreeNode but got", type(tree))
 
-def run_test(grammarfile: str, entry_rule: str, text: str, filename: str, verbose: bool = True):
+def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None, verbose: bool = True):
     g = Grammar(grammarfile)
 
     tree = g.apply_to(text, entry_rule)
@@ -88,18 +88,18 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str, verbos
 def test_algebra():
     expression = "-533+(256-79+105)-703+79-603+(87*(475))/(744)+274-((524/162*42-504*638))/(163*814-(((885)+451)-573+408-(649+267+((582-464))+688+590+524)*594+706))-881-728-133"
 
-    tree = run_test("grammars/algebra_grammar.txt", "Expression", expression)
+    tree = run_test("grammars/algebra_grammar.txt", "Expression", expression, verbose = False)
 
     result = evaluate_expression(tree)
 
     print(f"INFO: {expression} = {result}")
 
 def test_grammar():
-    filename = "test_files/grammar_grammar.txt"
+    filename = "grammars/grammar_grammar.txt"
     with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/grammar_grammar.txt", "Grammar", filename, text)
+    run_test("grammars/grammar_grammar.txt", "Grammar", text, filename)
 
 def test_qism():
     filename = "test_files/bootloader.qsm"
@@ -116,12 +116,11 @@ def test_qinp():
     run_test("grammars/qinp_grammar.txt", "GlobalCode", text, filename, verbose = True)
 
 def test_code_generation():
-    g = Grammar("grammars/grammar_grammar.txt")
+    g = Grammar("grammars/qism_grammar.txt")
     pre_str = str(g)
 
     exec(g.generate_python_code("load_dynamic_grammar"), globals())
-    g = Grammar()
-    g.ruleset = load_dynamic_grammar()
+    g = load_dynamic_grammar()
     post_str = str(g)
 
     if pre_str != post_str:
@@ -136,9 +135,9 @@ def test_code_generation():
 if __name__ == "__main__":
     try:
         #test_algebra()
-        test_qism()
+        #test_qism()
         #test_grammar()
-        #test_qinp()
+        test_qinp()
         #test_code_generation()
     except GrammarException as e:
         print(f"Error: {e}")

@@ -19,7 +19,7 @@ class RuleOptionInitializers:
         self.executors     = executors
 
 class RuleOption(ABC):
-    def __init__(self, initializers = RuleOptionInitializers()) -> None:
+    def __init__(self, initializers: RuleOptionInitializers = RuleOptionInitializers()) -> None:
         self.inverted      = initializers.inverted
         self.quantifier    = initializers.quantifier
         self.look_ahead    = initializers.look_ahead
@@ -70,27 +70,16 @@ class RuleOption(ABC):
             ruleset.farthest_match_index = index
 
         return tree, index
-
-    def _modifiers_to_str(self) -> str:
-        mod_str = ""
-
-        if self.inverted:
-            mod_str += "!"
-
-        mod_str += self.quantifier
-
-        if self.omit_match:
-            mod_str += "_"
-
-        return mod_str
     
-    def _modifiers_to_arg_str(self) -> str:
+    def _initializers_to_arg_str(self) -> str:
         args = []
         args.append(f"inverted={self.inverted}")
         args.append(f"quantifier=\"{self.quantifier}\"")
+        args.append(f"look_ahead={self.look_ahead}")
         args.append(f"omit_match={self.omit_match}")
+        args.append(f"alt_name=\"{escape_string(self.alt_name)}\"")
         args.append(f"executors={self._executors_to_arg_str()}")
-        return ", ".join(args)
+        return f"initializers=RuleOptionInitializers({', '.join(args)})"
 
     def _executors_to_arg_str(self) -> str:
         executors = []
@@ -121,8 +110,52 @@ class RuleOption(ABC):
             else:
                 raise GrammarException(f"Unknown executor operator '{operator}'")
 
+    def _has_modifiers(self) -> bool:
+        if self.inverted:
+            return True
+        if self.quantifier:
+            return True
+        if self.look_ahead:
+            return True
+        if self.omit_match:
+            return True
+        if self.alt_name:
+            return True
+        return False
+
+    def _modifiers_to_str(self) -> str:
+        mod_str = ""
+
+        if self.inverted:
+            mod_str += "!"
+
+        mod_str += self.quantifier
+
+        if self.look_ahead:
+            mod_str += "~"
+
+        if self.omit_match:
+            mod_str += "_"
+
+        if self.alt_name:
+            mod_str += f"@{self.alt_name}"
+
+        return mod_str
+
+    def _executors_to_str(self) -> str:
+        if len(self.executors) == 0:
+            return ""
+
+        exec_str = "{"
+        for operator, operand in self.executors:
+            exec_str += f"{operator} {operand},"
+        exec_str = exec_str[:-1]
+        exec_str += "}"
+
+        return exec_str
+
     def __str__(self) -> str:
-        return self._to_string() + self._modifiers_to_str()
+        return self._to_string() + self._modifiers_to_str() + self._executors_to_str()
 
     @abstractmethod
     def _match_specific(self, string: str, index: int, ruleset: "RuleSet") -> tuple[ParseTree, int]:
@@ -137,8 +170,8 @@ class RuleOption(ABC):
         raise NotImplementedError("RuleOption._generate_python_code() must be implemented by subclasses")
 
 class RuleSet:
-    def __init__(self, rules: dict[str, "Rule"] = dict(), stack_names: set[str] = set()) -> None:
-        self.rules = rules
+    def __init__(self, rules: dict[str, "Rule"] = {}, stack_names: set[str] = {}) -> None:
+        self.rules = dict(rules)
         self.stacks = dict(map(lambda name : (name, []), stack_names))
         self.stack_histories = dict(map(lambda name : (name, []), stack_names))
         self.farthest_match_index = 0
@@ -173,8 +206,8 @@ class RuleSet:
         return True
 
 class RuleOptionList(RuleOption):
-    def __init__(self, options: list[RuleOption] = [], **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, options: list[RuleOption] = [], *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.options: list[RuleOption] = list(options)
 
     def _generate_python_code_option_list(self) -> str:
@@ -185,8 +218,8 @@ class RuleOptionList(RuleOption):
 
 # (...)
 class RuleOptionMatchAll(RuleOptionList):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
     def _match_specific(self, string: str, index: int, ruleset: RuleSet) -> tuple[ParseTree, int]:
         old_index = index
@@ -200,15 +233,19 @@ class RuleOptionMatchAll(RuleOptionList):
         return node, index
     
     def _to_string(self) -> str:
-        return f"({' '.join([str(o) for o in self.options])})"
+        result = " ".join([str(o) for o in self.options])
+        if len(self.options) != 1 and self._has_modifiers():
+            result = f"({result})"
+
+        return result
     
     def _generate_python_code(self) -> str:
-        return f"RuleOptionMatchAll({self._generate_python_code_option_list()}, {self._modifiers_to_arg_str()})"
+        return f"RuleOptionMatchAll({self._generate_python_code_option_list()}, {self._initializers_to_arg_str()})"
 
 # [...]
 class RuleOptionMatchAny(RuleOptionList):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
     def _match_specific(self, string: str, index: int, ruleset: RuleSet) -> tuple[ParseTree, int]:
         for option in self.options:
@@ -218,15 +255,19 @@ class RuleOptionMatchAny(RuleOptionList):
         return None, index
     
     def _to_string(self) -> str:
-        return f"[{' '.join([str(o) for o in self.options])}]"
+        result = " ".join([str(o) for o in self.options])
+        if len(self.options) != 1:
+            result = f"[{result}]"
+
+        return result
     
     def _generate_python_code(self) -> str:
-        return f"RuleOptionMatchAny({self._generate_python_code_option_list()}, {self._modifiers_to_arg_str()})"
+        return f"RuleOptionMatchAny({self._generate_python_code_option_list()}, {self._initializers_to_arg_str()})"
 
 # 'xx'
 class RuleOptionMatchRange(RuleOption):
-    def __init__(self, first: str, last: str, initializers = RuleOptionInitializers()) -> None:
-        super().__init__(initializers)
+    def __init__(self, first: str, last: str, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.first = first
         self.last = last
     
@@ -240,12 +281,12 @@ class RuleOptionMatchRange(RuleOption):
         return f"'{self.first}{self.last}'"
 
     def _generate_python_code(self) -> str:
-        return f"RuleOptionMatchRange(\"{escape_string(self.first)}\", \"{escape_string(self.last)}\", {self._modifiers_to_arg_str()})"
+        return f"RuleOptionMatchRange(\"{escape_string(self.first)}\", \"{escape_string(self.last)}\", {self._initializers_to_arg_str()})"
 
 # "..."
 class RuleOptionMatchExact(RuleOption):
-    def __init__(self, value: str, initializers = RuleOptionInitializers()) -> None:
-        super().__init__(initializers)
+    def __init__(self, value: str, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.value = value
 
     def _match_specific(self, string: str, index: int, ruleset: RuleSet) -> tuple[ParseTree, int]:
@@ -255,14 +296,14 @@ class RuleOptionMatchExact(RuleOption):
         return None, index
     
     def _to_string(self) -> str:
-        return f"\"{escape_string(self.value, 1)}\""
+        return f"\"{escape_string(self.value)}\""
     
     def _generate_python_code(self) -> str:
-        return f"RuleOptionMatchExact(\"{escape_string(self.value)}\", {self._modifiers_to_arg_str()})"
+        return f"RuleOptionMatchExact(\"{escape_string(self.value)}\", {self._initializers_to_arg_str()})"
 
 class RuleOptionMatchRule(RuleOption):
-    def __init__(self, rulename: str, initializers = RuleOptionInitializers()) -> None:
-        super().__init__(initializers)
+    def __init__(self, rulename: str, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.rulename = rulename
 
     def _match_specific(self, string: str, index: int, ruleset: RuleSet) -> tuple[ParseTree, int]:
@@ -278,11 +319,11 @@ class RuleOptionMatchRule(RuleOption):
         return self.rulename
     
     def _generate_python_code(self) -> str:
-        return f"RuleOptionMatchRule(\"{escape_string(self.rulename)}\", {self._modifiers_to_arg_str()})"
+        return f"RuleOptionMatchRule(\"{escape_string(self.rulename)}\", {self._initializers_to_arg_str()})"
 
 class RuleOptionStackMatchExact(RuleOption):
-    def __init__(self, name: str, index: int, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, name: str, index: int, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.name = name
         self.index = index
 
@@ -305,11 +346,11 @@ class RuleOptionStackMatchExact(RuleOption):
         return f":{escape_string(self.name)}.{self.index}:"
 
     def _generate_python_code(self) -> str:
-        return f"RuleOptionStackMatchExact({escape_string(self.name)}, {self.index}, {self._modifiers_to_arg_str()})"
+        return f"RuleOptionStackMatchExact(\"{escape_string(self.name)}\", {self.index}, {self._initializers_to_arg_str()})"
 
 class Rule(RuleOptionMatchAny):
-    def __init__(self, name=None, anonymous=False, fuse_children=False, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, name=None, anonymous=False, fuse_children=False, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.name = name
         self.anonymous = anonymous
         self.fuse_children = fuse_children
@@ -326,7 +367,7 @@ class Rule(RuleOptionMatchAny):
         args.append(f"anonymous={self.anonymous}")
         args.append(f"fuse_children={self.fuse_children}")
         args.append(f"options={self._generate_python_code_option_list()}")
-        return f"Rule({', '.join(args)}, {self._modifiers_to_arg_str()})"
+        return f"Rule({', '.join(args)}, {self._initializers_to_arg_str()})"
 
     def __fuse_children(self, tree: ParseTree) -> None:
         if tree is None:
@@ -347,3 +388,16 @@ class Rule(RuleOptionMatchAny):
             else:
                 leafID = -1
             i += 1
+
+    def __str__(self) -> str:
+        modifiers = []
+        if self.anonymous:
+            modifiers.append("hidden")
+        if self.fuse_children:
+            modifiers.append("fuse")
+        
+        name = self.name
+        if len(modifiers) > 0:
+            name += "(" + " ".join(modifiers) + ")"
+
+        return f"{name}: {super().__str__()}"

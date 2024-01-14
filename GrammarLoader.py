@@ -312,7 +312,7 @@ class GrammarLoader:
         option.quantifier, col = self.__get_parse_rule_option_modifier_quantifier(line, col)
         option.look_ahead, col = self.__get_parse_rule_option_modifier_look_ahead(line, col)
         option.omit_match, col = self.__get_parse_rule_option_modifier_omit_match(line, col)
-        option.alt_name, col = self.__get_parse_rule_option_modifier_optional_name(line, col)
+        option.alt_name, col = self.__get_parse_rule_option_modifier_alt_name(line, col)
         return col
 
     def __parse_rule_option_executors(self, line: str, col: int, option: RuleOption) -> int:
@@ -368,7 +368,7 @@ class GrammarLoader:
             return True, col+1
         return False, col
     
-    def __get_parse_rule_option_modifier_optional_name(self, line: str, col: int) -> (bool, int):
+    def __get_parse_rule_option_modifier_alt_name(self, line: str, col: int) -> (bool, int):
         if col >= len(line) or line[col] != "@":
             return "", col
         col += 1

@@ -1,7 +1,8 @@
-from GrammarLoader import GrammarLoader
-from GrammarParseTree import ParseTree
-from GrammarException import GrammarException
 from GrammarRule import RuleSet
+from GrammarTools import escape_string
+from GrammarParseTree import ParseTree
+from GrammarLoader import GrammarLoader
+from GrammarException import GrammarException
 
 class Grammar:
     def __init__(self, filename: str = None) -> None:
@@ -28,11 +29,21 @@ class Grammar:
     def generate_python_code(self, func_name: str = "load_grammar_grammar", add_includes: bool = True) -> str:
         result = ""
         if add_includes:
-            result += "from GrammarRule import Rule, RuleOption, RuleOptionMatchAll, RuleOptionMatchAny, RuleOptionMatchRange, RuleOptionMatchExact, RuleOptionMatchRule\n"
-        result += f"def {func_name}() -> dict[str, Rule]:\n"
-        result += "    ruleset: dict[str, Rule] = {}\n"
-        for name, rule in self.ruleset.items():
-            result += f"    ruleset['{name}'] = {rule._generate_python_code()}\n"
+            result += "from Grammar import Grammar\n"
+            result += "from GrammarRule import RuleOptionInitializers, RuleSet\n"
+            result += "from GrammarRule import Rule, RuleOptionMatchAll, RuleOptionMatchAny, RuleOptionMatchRange, RuleOptionMatchExact, RuleOptionMatchRule, RuleOptionStackMatchExact\n"
+        result += f"def {func_name}() -> Grammar:\n"
+
+        result += "    rules: dict[str, Rule] = {}\n"
+        for name, rule in self.ruleset.rules.items():
+            result += f"    rules['{name}'] = {rule._generate_python_code()}\n"
+
+        result += "    stack_names: set[str] = {"
+        for name in self.ruleset.stacks.keys():
+            result += f"'{escape_string(name)}', "
+        result += "}\n"
+
+        result += "    ruleset = RuleSet(rules, stack_names)\n"
 
         result += "    g = Grammar()\n"
         result += "    g.ruleset = ruleset\n"
@@ -42,13 +53,7 @@ class Grammar:
 
     def __str__(self) -> str:
         result = ""
-        for name, rule in self.ruleset.items():
-            modifiers = []
-            if rule.anonymous:
-                modifiers.append("hidden")
-            if rule.fuse_children:
-                modifiers.append("fuse")
-            if len(modifiers) > 0:
-                name += "(" + " ".join(modifiers) + ")"
-            result += f"{name}: {rule}\n"
+        for _, rule in self.ruleset.rules.items():
+            result += f"{rule}\n"
+        
         return result
