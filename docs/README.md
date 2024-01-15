@@ -448,7 +448,7 @@ This means that a rule name cannot be the same as a stack name or match replacem
 ### Escape sequences
 
 Escape sequences are used to escape special characters in strings. \
-Supported escape sequences:
+Supported escape sequences are:
   - `\a`: Bell
   - `\b`: Backspace
   - `\e`: Escape character
