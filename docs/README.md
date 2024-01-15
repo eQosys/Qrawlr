@@ -32,6 +32,7 @@
     - [Identifier](#identifier)
     - [Stack](#stack)
     - [Name collision](#name-collision)
+    - [Escape sequences](#escape-sequences)
 
 </details>
 
@@ -223,7 +224,8 @@ If one of the matchers matches, the entire matcher is considered matched and all
 
 #### Match range
 
-Matches a range of characters.
+Matches an inclusive range of characters. \
+[Escape sequences](#escape-sequences) are supported.
 
 >Syntax:
 >```qrawlr
@@ -237,7 +239,8 @@ Matches a range of characters.
 
 #### Match exact
 
-Matches an exact string.
+Matches an exact string. \
+[Escape sequences](#escape-sequences) are supported.
 
 >Syntax:
 >```qrawlr
@@ -356,7 +359,7 @@ When the omit match modifier is used, the matched string will not be added to th
 The replace match modifier tells the engine to replace the matched string with the specified content.
 
 The content can be one of the following:
-  - ``"`string`"``: Replace with the specified string
+  - ``"`string`"``: Replace with the specified string. [Escape sequences](#escape-sequences) are supported.
   - ``:`stack_name`.`index`:``: Replace with the _nth_ item on the specified [stack](#stack).
   - `` `name` ``: Give the matched string a name. Use the [omit match modifier](#omit-match) to not add the matched string to the parse tree.
 
@@ -439,3 +442,22 @@ It is used to store matched strings for later use.
 
 [Rule](#rule-definition) names, [stack](#stack) names and [match replacement](#replace-match) names share the same namespace. \
 This means that a rule name cannot be the same as a stack name or match replacement name and vice versa.
+
+---
+
+### Escape sequences
+
+Escape sequences are used to escape special characters in strings. \
+Supported escape sequences:
+  - `\a`: Bell
+  - `\b`: Backspace
+  - `\e`: Escape character
+  - `\f`: Form feed
+  - `\n`: Newline
+  - `\r`: Carriage return
+  - `\t`: Horizontal tab
+  - `\v`: Vertical tab
+  - `\\`: Backslash
+  - `\'`: Single quote
+  - `\"`: Double quote
+  - `\xhh`: Hexadecimal character code
