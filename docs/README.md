@@ -161,7 +161,7 @@ Every matcher must be matched for the [rule option](#match-option) to be conside
 ### Matcher
 
 A matcher is the smalles unit of a [rule option](#match-option). \
-There are 7 types of matchers: \
+There are 7 types of matchers:
   - [Any char](#match-any-char)
   - [All](#match-all)
   - [Any](#match-any)
@@ -301,7 +301,7 @@ The modifiers must be placed in the following order:
 
 Inverts the matcher. \
 If the matcher would normally match, it will not match and vice versa. \
-If, after inverting, the matcher would match, the matched string will be a single character.
+If, after inverting, the matcher would match, the matched item will be a single character.
 
 >Syntax:
 >```qrawlr
@@ -327,7 +327,7 @@ It can be one of the following:
 
 #### Lookahead
 
-The lookahead modifier tells the engine to not consume the matched string. \
+The lookahead modifier tells the engine to not consume the matched item. \
 This means that the matched string will be available for other (following) matchers to match.
 
 >Syntax:
@@ -342,7 +342,7 @@ This means that the matched string will be available for other (following) match
 
 #### Omit match
 
-When the omit match modifier is used, the matched string will not be added to the parse tree.
+When the omit match modifier is used, the matched item will not be added to the parse tree.
 
 >Syntax:
 >```qrawlr
@@ -356,7 +356,7 @@ When the omit match modifier is used, the matched string will not be added to th
 
 #### Replace match
 
-The replace match modifier tells the engine to replace the matched string with the specified content.
+The replace match modifier tells the engine to replace the matched item with the specified content.
 
 The content can be one of the following:
   - ``"`string`"``: Replace with the specified string. [Escape sequences](#escape-sequences) are supported.
@@ -434,6 +434,8 @@ Only the following characters are allowed in identifiers:
 ### Stack
 
 A stack is a list of strings. \
+Each stack has a unique name assigned. \
+Stacks are created implicitly when referencing them via a [match stack](#match-stack) or an [executor](#matcher-executors). \
 It is used to store matched strings for later use.
 
 ---
