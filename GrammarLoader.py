@@ -118,21 +118,15 @@ class GrammarLoader:
     def __get_parse_literal_string(self, line: str, col: int) -> (str, int):
         begin = col
 
-        ESCAPE_CHARS = "\"\\nt"
+        content = ""
 
         while col < len(line) and line[col] != "\"":
             if line[col] == "\\":
+                part, col = self.__parse_escape_sequence(line, col+1)
+                content += part
+            else:
+                content += line[col]
                 col += 1
-                if col >= len(line):
-                    raise self.__make_exception("Expected character after '\\'", col)
-                if line[col] not in ESCAPE_CHARS:
-                    raise self.__make_exception("Invalid escape sequence", col)
-            col += 1
-
-        content = line[begin:col]
-
-        for c in ESCAPE_CHARS:
-            content = content.replace(f"\\{c}", eval(f"\"\\{c}\""))
         
         if col >= len(line) or line[col] != "\"":
             raise self.__make_exception("Expected closing '\"'", col)
@@ -140,6 +134,38 @@ class GrammarLoader:
 
         return content, col
         
+    def __parse_escape_sequence(self, line: str, col: int) -> (str, int):
+        SHORT_ESCAPES = {
+            ord("a"):  "\a",
+            ord("b"):  "\b",
+            ord("e"):  "\e",
+            ord("f"):  "\f",
+            ord("n"):  "\n",
+            ord("r"):  "\r",
+            ord("t"):  "\t",
+            ord("v"):  "\v",
+            ord("\\"): "\\",
+            ord("'"):  "'",
+            ord("\""): "\""
+        }
+
+        if col >= len(line):
+            raise self.__make_exception("Expected escape sequence after '\\'", col)
+    
+        if ord(line[col]) in SHORT_ESCAPES:
+            return line[col].translate(SHORT_ESCAPES), col+1
+        
+        if line[col] == "x":
+            col += 1
+            if col+1 >= len(line):
+                raise self.__make_exception("Expected hex digit after '\\x'", col)
+            
+            if not line[col].isxdigit() or not line[col+1].isxdigit():
+                raise self.__make_exception("Expected hex digit after '\\x'", col)
+            
+            return chr(int(line[col:col+2], 16)), col+2
+
+        raise self.__make_exception("Unknown escape sequence", col)
 
     def __get_parse_rule_definition_header_modifiers(self, line: str, col: int) -> (bool, bool, str, int):
         anonymous = False

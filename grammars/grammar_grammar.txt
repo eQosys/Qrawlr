@@ -4,7 +4,7 @@ Grammar:
 	GrammarLine ( "\n"_ GrammarLine )*
 
 GrammarLine(hidden):
-	RuleDefinition Comment?
+	RuleDefinition Whitespace?_ Comment?
 	Comment
 	Whitespace?_ "\n"~_
 
@@ -91,7 +91,7 @@ MatchExact(fuse):
 	String
 
 MatchRule:
-	Identifier [ "^"_->InsertContent "^"!~_->:asdf.0: ]
+	Identifier "^"?_->InsertContent
 
 MatchStack:
 	":"_ Identifier "."_ Integer ":"_
@@ -115,23 +115,36 @@ String(fuse):
 	"\""_ StringChar* "\""_
 
 Integer:
-	NumChar+
+	"0x"_ HexChar+ ""_->FormatHex
+	"0"_ OctChar+ ""_->FormatOct
+	DecChar+ ""_->FormatDec
 
 StringChar(hidden):
-	"\\\\"
-	"\\\""
+	EscapeSequence
 	"\""!
+
+EscapeSequence(fuse):
+	"\\"_ [ "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\"" ]
+	"\\"_ "x" HexChar HexChar
 
 AlphaChar(hidden):
     'az'
     'AZ'
 
-NumChar(hidden):
+HexChar(hidden):
+	'09'
+	'af'
+	'AF'
+
+OctChar(hidden):
+	'07'
+
+DecChar(hidden):
     '09'
 
 AlnumChar(hidden):
     AlphaChar
-    NumChar
+    DecChar
 
 Newline(hidden):
     "\n"

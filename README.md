@@ -8,7 +8,7 @@ TODO
 
 ## Next steps/features
 
- - [ ] escape sequences (e.g. "\xhh")
+ - [x] escape sequences (e.g. "\xhh")
  - [x] count specifier (e.g. "h"#2 or "h"#2-5)
  - [x] match replacement (e.g. "h"->"H", "h"->ParsedH)
  - [ ] insert content modifier (e.g. String^)
