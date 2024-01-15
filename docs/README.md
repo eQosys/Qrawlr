@@ -1,8 +1,39 @@
 # Qrawlr Grammar Documentation
 
+
 ## Table of Contents
- - [Usage](#usage)
- - [Grammar](#grammar)
+<details>
+<summary>Click to expand</summary>
+
+  - [Usage](#usage)
+    - [Example](#example)
+  - [Grammar](#grammar)
+    - [Comments](#comments)
+    - [Rule definition](#rule-definition)
+      - [Rule modifiers](#rule-modifiers)
+    - [Rule option](#rule-option)
+    - [Matcher](#matcher)
+      - [Match any char](#match-any-char)
+      - [Match all](#match-all)
+      - [Match any](#match-any)
+      - [Match range](#match-range)
+      - [Match exact](#match-exact)
+      - [Match rule](#match-rule)
+      - [Match stack](#match-stack)
+    - [Matcher Modifiers](#matcher-modifiers)
+      - [Invert](#invert)
+      - [Quantifier](#quantifier)
+      - [Lookahead](#lookahead)
+      - [Omit match](#omit-match)
+      - [Replace match](#replace-match)
+    - [Matcher Executors](#matcher-executors)
+      - [Push](#push)
+      - [Pop](#pop)
+    - [Identifier](#identifier)
+    - [Stack](#stack)
+    - [Name collision](#name-collision)
+
+</details>
 
 ---
 
@@ -100,8 +131,8 @@ Rule names follow the same rules as [identifiers](#identifier)
 
 #### Rule modifiers
 
- - `hidden`: The matched content will be added directly to the parent.
- - `fuse`: All consecutive strings will be fused into a single string. (e.g. "Hel" "lo" -> "Hello")
+  - `hidden`: The matched content will be added directly to the parent.
+  - `fuse`: All consecutive strings will be fused into a single string. (e.g. "Hel" "lo" -> "Hello")
 
 ### Rule option
 
@@ -124,13 +155,13 @@ Every matcher must be matched for the [rule option](#match-option) to be conside
 
 A matcher is the smalles unit of a [rule option](#match-option). \
 There are 7 types of matchers: \
- - [Any char](#match-any-char)
- - [All](#match-all)
- - [Any](#match-any)
- - [Range](#match-range)
- - [Exact](#match-exact)
- - [Rule](#match-rule)
- - [Stack](#match-stack)
+  - [Any char](#match-any-char)
+  - [All](#match-all)
+  - [Any](#match-any)
+  - [Range](#match-range)
+  - [Exact](#match-exact)
+  - [Rule](#match-rule)
+  - [Stack](#match-stack)
 
 It consists of one of the matcher types, optionally followed by [modifiers](#matcher-modifiers) and/or [executors](#matcher-executors).
 
@@ -276,12 +307,12 @@ If, after inverting, the matcher would match, the matched string will be a singl
 The quantifier modifier controls how many times the matcher will match.
 
 It can be one of the following:
- - `?`: Match 0 or 1 times
- - `*`: Match 0 or more times
- - `+`: Match 1 or more times
- - ``#<`max` ``: Match between 0 and `max-1` times
- - ``#>`min` ``: Match at least `min+1` times
- - ``#`min`-`max` ``: Match between `min` and `max` times
+  - `?`: Match 0 or 1 times
+  - `*`: Match 0 or more times
+  - `+`: Match 1 or more times
+  - ``#<`max` ``: Match between 0 and `max-1` times
+  - ``#>`min` ``: Match at least `min+1` times
+  - ``#`min`-`max` ``: Match between `min` and `max` times
 
 #### Lookahead
 
@@ -317,9 +348,9 @@ When the omit match modifier is used, the matched string will not be added to th
 The replace match modifier tells the engine to replace the matched string with the specified content.
 
 The content can be one of the following:
- - ``"`string`"``: Replace with the specified string
- - ``:`stack_name`.`index`:``: Replace with the _nth_ item on the specified [stack](#stack).
- - `` `name` ``: Give the matched string a name. Use the [omit match modifier](#omit-match) to not add the matched string to the parse tree.
+  - ``"`string`"``: Replace with the specified string
+  - ``:`stack_name`.`index`:``: Replace with the _nth_ item on the specified [stack](#stack).
+  - `` `name` ``: Give the matched string a name. Use the [omit match modifier](#omit-match) to not add the matched string to the parse tree.
 
 >Syntax:
 >```qrawlr
