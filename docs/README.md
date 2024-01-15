@@ -93,6 +93,8 @@ Comments _must_ start with `\\` at the beginning of a line and end at the end of
 >\\ This is a comment
 >```
 
+---
+
 ### Rule definition
 
 Rules are defined by a header and a body. \
@@ -134,6 +136,8 @@ Rule names follow the same rules as [identifiers](#identifier)
   - `hidden`: The matched content will be added directly to the parent.
   - `fuse`: All consecutive strings will be fused into a single string. (e.g. "Hel" "lo" -> "Hello")
 
+---
+
 ### Rule option
 
 A rule option is a sequence of [matchers](#matcher). \
@@ -150,6 +154,8 @@ Every matcher must be matched for the [rule option](#match-option) to be conside
 >\\ Rule option with 2 matchers. Matches "HelloWorld"
 >Rule:
 >    "Hello" "World"
+
+---
 
 ### Matcher
 
@@ -273,6 +279,8 @@ Index 0 denotes the top of the stack. (Last item pushed)
 >:exampleStack.0:
 >```
 
+---
+
 ### Matcher Modifiers
 
 Matcher modifiers control the behavior of a matcher. \
@@ -364,6 +372,8 @@ The content can be one of the following:
 >"Bar"_->ParsedBar
 >```
 
+---
+
 ### Matcher Executors
 
 Matcher executors are used to execute a limited set of actions when a matcher matches. \
@@ -408,16 +418,22 @@ Pops the top item from the specified stack.
 >""_{ pop exampleStack }
 >```
 
+---
+
 ### Identifier
 
 Identifiers are used for [rule](#rule-definition) names, [stack](#stack) names and [match replacement](#replace-match) names. \
 Only the following characters are allowed in identifiers:
 > a-z, A-Z
 
+---
+
 ### Stack
 
 A stack is a list of strings. \
 It is used to store matched strings for later use.
+
+---
 
 ### Name collision
 
