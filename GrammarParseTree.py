@@ -7,11 +7,11 @@ from GrammarTools import escape_string
 class ParseTree(ABC):
     __id_iter = itertools.count()
 
-    def __init__(self, line: int, column: int) -> None:
+    def __init__(self, line: int, column: int, length: int = 0) -> None:
         self.id = next(ParseTree.__id_iter)
         self.line = line
         self.column = column
-        self.length = 0
+        self.length = length
 
     def to_digraph(self, verbose: bool = True) -> graphviz.Digraph:
         dot = graphviz.Digraph()
@@ -56,10 +56,9 @@ class ParseTreeNode(ParseTree):
         return "".join([str(c) for c in self.children])
 
 class ParseTreeExactMatch(ParseTree):
-    def __init__(self, value: str, line: int, column: int) -> None:
-        super().__init__(line, column)
+    def __init__(self, value: str, line: int, column: int, length_override: int = None) -> None:
+        super().__init__(line, column, len(value) if length_override is None else length_override)
         self.value = value
-        self.length = len(value)
 
     def _to_digraph(self, dot: graphviz.Digraph, verbose) -> str:
         text = f"\"{escape_string(self.value)}\""

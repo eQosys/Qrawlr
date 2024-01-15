@@ -31,40 +31,12 @@ RuleModifier:
 # ---------------- RULE OPTION ----------------
 
 RuleOptionDefinition:
-	RuleOption (Whitespace?_ RuleOption)*
-
-RuleOption:
-	Matcher RuleOptionModifiers RuleOptionExecutors?
-
-# ---------------- OPTION MODIFIERS ----------------
-
-RuleOptionModifiers(hidden):
-	OptionModifierInvert? OptionModifierQuantifier? OptionModifierLookAhead? OptionModifierOmitMatch? OptionModifierReplaceMatch?
-
-OptionModifierInvert:
-	"!"_
-
-OptionModifierQuantifier:
-	[ "?" "*" "+" ]
-
-OptionModifierLookAhead:
-	"~"_
-
-OptionModifierOmitMatch:
-	"_"_
-
-OptionModifierReplaceMatch:
-	"->"_ [ Identifier String MatchStack ]
-
-# ---------------- OPTION EXECUTORS ----------------
-
-RuleOptionExecutors(hidden):
-	"{"_ RuleOptionExecutor (Whitespace?_ "," Whitespace?_ RuleOptionExecutor)* "}"_
-
-RuleOptionExecutor:
-	Identifier Identifier
+	FullMatcher (Whitespace?_ FullMatcher)*
 
 # ---------------- MATCHERS ----------------
+
+FullMatcher:
+	Matcher MatcherModifiers MatcherExecutors?
 
 Matcher(hidden):
 	MatchAnyChar
@@ -96,6 +68,34 @@ MatchRule:
 MatchStack:
 	":"_ Identifier "."_ Integer ":"_
 
+# ---------------- MATCHER MODIFIERS ----------------
+
+MatcherModifiers(hidden):
+	OptionModifierInvert? OptionModifierQuantifier? OptionModifierLookAhead? OptionModifierOmitMatch? OptionModifierReplaceMatch?
+
+OptionModifierInvert:
+	"!"_
+
+OptionModifierQuantifier:
+	[ "?" "*" "+" ]
+
+OptionModifierLookAhead:
+	"~"_
+
+OptionModifierOmitMatch:
+	"_"_
+
+OptionModifierReplaceMatch:
+	"->"_ [ Identifier String MatchStack ]
+
+# ---------------- MATCHER EXECUTORS ----------------
+
+MatcherExecutors(hidden):
+	"{"_ RuleOptionExecutor (Whitespace?_ "," Whitespace?_ RuleOptionExecutor)* "}"_
+
+RuleOptionExecutor:
+	Identifier Identifier
+
 # ---------------- IDENTIFIER ----------------
 
 Identifier(fuse):
@@ -104,7 +104,7 @@ Identifier(fuse):
 # ---------------- COMMENT ----------------
 
 Comment(fuse):
-	"#" "\n"!*
+	"\\\\" "\n"!*
 
 # ---------------- MISCELLANEOUS ----------------
 

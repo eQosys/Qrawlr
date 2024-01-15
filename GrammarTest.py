@@ -1,3 +1,4 @@
+import json
 from Grammar import Grammar, GrammarException
 from GrammarTools import index_to_line_and_column
 from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
@@ -5,7 +6,7 @@ from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 def load_dynamic_grammar():
     raise GrammarException("this_is_a_test_code_name should have been replaced by code generation")
 
-def write_tree(tree: ParseTree, verbose):
+def write_tree_graphviz(tree: ParseTree, verbose):
     print("INFO: Writing tree to tree.gv... ", end="", flush=True)
     with open("tree.gv", "w") as f:
         f.write(tree.to_digraph(verbose).source)
@@ -80,7 +81,7 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None,
     else:
         print("INFO: Fully parsed text")
 
-    write_tree(tree, verbose)
+    write_tree_graphviz(tree, verbose)
     render_tree(tree, verbose)
 
     return tree
@@ -134,9 +135,9 @@ def test_code_generation():
 
 if __name__ == "__main__":
     try:
-        #test_algebra()
+        test_algebra()
         #test_qism()
-        test_grammar()
+        #test_grammar()
         #test_qinp()
         #test_code_generation()
     except GrammarException as e:

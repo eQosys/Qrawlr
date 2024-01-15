@@ -23,7 +23,7 @@ class GrammarLoader:
                 line = line.rstrip()
                 if line == "":
                     continue
-                if line.startswith("#"):
+                if line.startswith("\\"):
                     continue
                 self.lines.append((lineCount, line))
 
