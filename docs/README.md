@@ -26,11 +26,12 @@
 >```python
 >from Grammar import Grammar, GrammarException
 >
->text_to_parse = "Hello World"
 >grammar = Grammar("example.qgr")
+>text_to_parse = "Hello World"
+>entry_point = "HelloWorld"
 >
 >try:
->    parse_tree = grammar.apply_to(text_to_parse, "HelloWorld")
+>    parse_tree = grammar.apply_to(text_to_parse, entry_point)
 >except GrammarException as e:
 >    print(e)
 >else:
@@ -64,8 +65,8 @@ Comments _must_ start with `\\` at the beginning of a line and end at the end of
 ### Rule definition
 
 Rules are defined by a header and a body. \
-The header consists of the rule name and optional modifiers. \
-The body consists of at least one rule option.
+The header consists of the rule name and optional [modifiers](#rule-modifiers). \
+The body consists of at least one [rule option](#rule-option).
 
 The engine will try to match the rule options in the order they are defined. \
 After a rule option has been matched, the entire rule is considered matched and the engine will return to the parent rule.
@@ -99,14 +100,14 @@ Rule names follow the same rules as [identifiers](#identifier)
 
 #### Rule modifiers
 
- - `hidden`: TODO
- - `fuse`: TODO
+ - `hidden`: The matched content will be added directly to the parent.
+ - `fuse`: All consecutive strings will be fused into a single string. (e.g. "Hel" "lo" -> "Hello")
 
 ### Rule option
 
-A rule option is a sequence of matchers. \
+A rule option is a sequence of [matchers](#matcher). \
 The engine will try to match the matchers in the order they are defined. \
-Every matcher must be matched for the rule option to be considered matched.
+Every matcher must be matched for the [rule option](#match-option) to be considered matched.
 
 >Syntax:
 >```qrawlr
@@ -121,7 +122,7 @@ Every matcher must be matched for the rule option to be considered matched.
 
 ### Matcher
 
-A matcher is the smalles unit of a rule option. \
+A matcher is the smalles unit of a [rule option](#match-option). \
 There are 7 types of matchers: \
  - [Any char](#match-any-char)
  - [All](#match-all)
@@ -131,7 +132,7 @@ There are 7 types of matchers: \
  - [Rule](#match-rule)
  - [Stack](#match-stack)
 
-It consists of one of the matcher types, optionally followed by modifiers and/or executors.
+It consists of one of the matcher types, optionally followed by [modifiers](#matcher-modifiers) and/or [executors](#matcher-executors).
 
 >Syntax:
 >```qrawlr
@@ -227,7 +228,7 @@ Matches a rule.
 
 #### Match stack
 
-Matches the _nth_ item on the specified stack. \
+Matches the _nth_ item on the specified [stack](#stack). \
 If the index is out of bounds, the matcher will always match with an empty string. \
 Index 0 denotes the top of the stack. (Last item pushed)
 
@@ -257,9 +258,7 @@ The modifiers must be placed in the following order:
 #### Invert
 
 Inverts the matcher. \
-If the matcher would normally match, it will not match. \
-If the matcher would normally not match, it will match.
-
+If the matcher would normally match, it will not match and vice versa. \
 If, after inverting, the matcher would match, the matched string will be a single character.
 
 >Syntax:
@@ -274,7 +273,8 @@ If, after inverting, the matcher would match, the matched string will be a singl
 
 #### Quantifier
 
-The quantifier modifier controls how many times the matcher will match. \
+The quantifier modifier controls how many times the matcher will match.
+
 It can be one of the following:
  - `?`: Match 0 or 1 times
  - `*`: Match 0 or more times
@@ -318,7 +318,7 @@ The replace match modifier tells the engine to replace the matched string with t
 
 The content can be one of the following:
  - ``"`string`"``: Replace with the specified string
- - ``:`stack_name`.`index`:``: Replace with the _nth_ item on the specified stack.
+ - ``:`stack_name`.`index`:``: Replace with the _nth_ item on the specified [stack](#stack).
  - `` `name` ``: Give the matched string a name. Use the [omit match modifier](#omit-match) to not add the matched string to the parse tree.
 
 >Syntax:
@@ -336,7 +336,7 @@ The content can be one of the following:
 ### Matcher Executors
 
 Matcher executors are used to execute a limited set of actions when a matcher matches. \
-They are always placed directly after the matcher modifiers. (No whitespace in between)
+They are always placed directly after the [matcher modifiers](#matcher-modifiers). (No whitespace in between)
 
 >Syntax:
 >```qrawlr
@@ -351,7 +351,7 @@ They are always placed directly after the matcher modifiers. (No whitespace in b
 #### Push
 
 Pushes the match as a single item on the specified stack.
-Omitted matches will not be pushed.
+[Omitted matches](#omit-match) will not be pushed.
 
 >Syntax:
 >```qrawlr
@@ -379,7 +379,7 @@ Pops the top item from the specified stack.
 
 ### Identifier
 
-Identifiers are used for rule names, stack names and match replacement names. \
+Identifiers are used for [rule](#rule-definition) names, [stack](#stack) names and [match replacement](#replace-match) names. \
 Only the following characters are allowed in identifiers:
 > a-z, A-Z
 
@@ -390,5 +390,5 @@ It is used to store matched strings for later use.
 
 ### Name collision
 
-Rule names, stack names and match replacement names share the same namespace. \
+[Rule](#rule-definition) names, [stack](#stack) names and [match replacement](#replace-match) names share the same namespace. \
 This means that a rule name cannot be the same as a stack name or match replacement name and vice versa.
