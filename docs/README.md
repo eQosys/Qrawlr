@@ -142,7 +142,7 @@ Rule names follow the same rules as [identifiers](#identifier)
 ### Rule option
 
 A rule option is a sequence of [matchers](#matcher). \
-A rule option is treated as if surrounded by parenthesis denoting a [match all](#match-all) matcher. \
+A rule option is treated as if surrounded by parenthesis denoting a [match all](#match-all) matcher.
 
 >Syntax:
 >```qrawlr
