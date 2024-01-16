@@ -159,5 +159,3 @@ Newline(hidden):
 
 Whitespace(fuse):
     [ " " "\t" ]+
-
-\\ COMMENT @ END OF LINE
