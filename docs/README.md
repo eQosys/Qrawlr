@@ -26,9 +26,12 @@
       - [Lookahead](#lookahead)
       - [Omit match](#omit-match)
       - [Replace match](#replace-match)
+    - [Action Triggers](#action-triggers)
     - [Matcher Actions](#matcher-actions)
-      - [Push](#push)
-      - [Pop](#pop)
+      - [Action Push](#action-push)
+      - [Action Pop](#action-pop)
+      - [Action Message](#action-message)
+      - [Action Fail](#action-fail)
     - [Identifier](#identifier)
     - [Stack](#stack)
     - [Name collision](#name-collision)
@@ -169,7 +172,7 @@ There are 7 types of matchers:
   - [Rule](#match-rule)
   - [Stack](#match-stack)
 
-It consists of one of the matcher types, optionally followed by [modifiers](#matcher-modifiers) and/or [actions](#matcher-actions).
+It consists of one of the matcher types, optionally followed by [modifiers](#matcher-modifiers) and/or [action-triggers](#action-triggers).
 
 >Syntax:
 >```qrawlr
@@ -377,49 +380,113 @@ The content can be one of the following:
 
 ---
 
-### Matcher Actions
+### Action Triggers
 
-Matcher actions are used to execute a limited set of actions when a matcher matches. \
+Action triggers are used to execute [actions](matcher-actions) on specific events. \
 They are always placed directly after the [matcher modifiers](#matcher-modifiers). (No whitespace in between)
+When a trigger has only one action, the brackets for the action list can be omitted.
+
+Triggers can be on of the following:
+  - `onMatch`: Executes the specified actions when the matcher matches.
+  - `onFail`: Executes the specified actions when the matcher fails to match.
+
+**Note**: `onMatch` also triggers when any subsequent matcher fails to match. It does not guarantee that the match will be present in the final parse tree.
 
 >Syntax:
 >```qrawlr
->{`actions1`, `action2`, ...}
+>`matcher`{`trigger1`: `actionList1`, `trigger2`: `actionList2`, ...}
 >```
 >
 >Example:
 >```qrawlr
->"Hello"?{ push exampleStack }
+>"Hello"?{ onMatch: push(_, exampleStack), onFail: [ message("Hello user!"), fail("Expected 'Hello'") ] }
 >```
 
-#### Push
+---
+
+### Matcher Actions
+
+Matcher actions are used to execute a limited set of actions when a trigger is activated.
+
+Actions can be one of the following:
+  - [`push`](#action-push)
+  - [`pop`](#action-pop)
+  - [`message`](#action-message)
+  - [`fail`](#action-fail)
+
+Action arguments can be one of the following:
+  - `"string"`: A string. [Escape sequences](#escape-sequences) are supported.
+  - `identifier`: An [identifier](#identifier).
+  - `_`: Represents the matched string.
+
+>Syntax:
+>```qrawlr
+>`action`(`arg1`, `arg2`, ...)
+>```
+>
+>Example:
+>```qrawlr
+>push(_, exampleStack)
+>```
+
+#### Action Push
 
 Pushes the match as a single item on the specified stack.
 [Omitted matches](#omit-match) will not be pushed.
 
 >Syntax:
 >```qrawlr
->push `stack_name`
+>push(`string_to_push`, `stack_name`)
 >```
 >
 >Example:
 >```qrawlr
->"Hello"?{ push exampleStack }
+>push(_, exampleStack)
 >```
 
-#### Pop
+#### Action Pop
 
 Pops the top item from the specified stack.
 
 >Syntax:
 >```qrawlr
->pop `stack_name`
+>pop(`stack_name`)
 >```
 >
 >Example:
 >```qrawlr
->""_{ pop exampleStack }
+>pop(exampleStack)
 >```
+
+#### Action Message
+
+Prints the specified message along with the current position in the text to the console and continues parsing.
+
+>Syntax:
+>```qrawlr
+>message(`message`)
+>```
+>
+>Example:
+>```qrawlr
+>message("Hello user!")
+>```
+>==> MSG: file.qgr:1:1: Hello user!
+
+#### Action Fail
+
+Stops the parsing process and prints the specified message along with the current position in the text.
+
+>Syntax:
+>```qrawlr
+>fail(`message`)
+>```
+>
+>Example:
+>```qrawlr
+>fail("Expected 'Hello'")
+>```
+>==> FAIL: file.qgr:1:1: Expected 'Hello'
 
 ---
 

@@ -65,7 +65,7 @@ class Matcher(ABC):
         
         if match_count < self.count_min:
             # TODO: Maybe 'index' should be 'old_index'?
-            self._run_actions_for_trigger(TRIGGER_ON_FAIL, None, ruleset, make_position_string(filename, string, index))
+            self._run_actions_for_trigger(TRIGGER_ON_FAIL, None, ruleset, make_position_string(filename, string, old_index))
             ruleset.revert_to_checkpoint(checkpoint)
             return None, old_index
 
@@ -77,7 +77,7 @@ class Matcher(ABC):
             index = old_index
 
         # TODO: Maybe 'index' should be 'old_index'?
-        self._run_actions_for_trigger(TRIGGER_ON_MATCH, tree, ruleset, make_position_string(filename, string, index))
+        self._run_actions_for_trigger(TRIGGER_ON_MATCH, tree, ruleset, make_position_string(filename, string, old_index))
 
         tree = self._apply_match_replacement(tree, string, index, ruleset)
 
@@ -124,16 +124,20 @@ class Matcher(ABC):
     def _run_actions_for_trigger(self, trigger_name: str, tree: ParseTreeNode, ruleset: "RuleSet", position_str: str) -> None:
         trigger = self.actions.get(trigger_name, [])
         for (action_name, args) in trigger:
+            args = list(map(lambda arg : arg if arg[0] != ACTION_ARG_TYPE_MATCH else (ACTION_ARG_TYPE_STRING, str(tree)), args))
+            
             if action_name == "push":
-                self._run_action_push(tree, args, ruleset)
+                self._run_action_push(tree, args, ruleset, position_str)
             elif action_name == "pop":
-                self._run_action_pop(tree, args, ruleset)
+                self._run_action_pop(tree, args, ruleset, position_str)
+            elif action_name == "message":
+                self._run_action_message(tree, args, ruleset, position_str)
             elif action_name == "fail":
                 self._run_action_fail(tree, args, ruleset, position_str)
             else:
                 raise GrammarException(f"Unknown action '{action_name}'")
 
-    def _run_action_push(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet") -> None:
+    def _run_action_push(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet", position_str: str) -> None:
         if len(args) != 2:
             raise GrammarException("Wrong number of arguments for action 'push'")
         
@@ -147,10 +151,10 @@ class Matcher(ABC):
 
         if arg_item[0] == ACTION_ARG_TYPE_STRING:
             value = arg_item[1]
-        elif arg_item[0] == ACTION_ARG_TYPE_MATCH:
-            value = str(tree)
         elif arg_item[0] == ACTION_ARG_TYPE_IDENTIFIER:
             raise GrammarException("Identifier not allowed for action argument 'item'")
+        else:
+            raise GrammarException("Unknown action argument type for 'item'")
         
         stack = ruleset.stacks[stack_name]
         history = ruleset.stack_histories[stack_name]
@@ -158,7 +162,7 @@ class Matcher(ABC):
         stack.append(value)
         history.append(("push", value))
 
-    def _run_action_pop(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet") -> None:
+    def _run_action_pop(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet", position_str: str) -> None:
         if len(args) != 1:
             raise GrammarException("Wrong number of arguments for action 'pop'")
         
@@ -177,6 +181,19 @@ class Matcher(ABC):
 
         value = stack.pop()
         history.append(("pop", value))
+
+    def _run_action_message(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet", position_str: str) -> None:
+        if len(args) != 1:
+            raise GrammarException("Wrong number of arguments for action 'message'")
+        
+        arg_message = args[0]
+
+        if arg_message[0] != ACTION_ARG_TYPE_STRING:
+            raise GrammarException("Expected string for action argument 'message'")
+        
+        message = arg_message[1]
+
+        print(f"MSG: {position_str}: {message}")
 
     def _run_action_fail(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet", position_str: str) -> None:
         if len(args) != 1:
