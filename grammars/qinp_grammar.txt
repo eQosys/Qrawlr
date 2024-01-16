@@ -1,4 +1,4 @@
-# ---------------- GLOBAL CODE ----------------
+\\ ---------------- GLOBAL CODE ----------------
 
 GlobalCode:
     GlobalCodeLine ( Newline_ GlobalCodeLine? )*
@@ -11,17 +11,17 @@ GlobalCodeStatement(hidden):
     Pass
     SpaceDefinition
 
-# ---------------- PASS ----------------
+\\ ---------------- PASS ----------------
 
 Pass:
     "pass"_
 
-# ---------------- IMPORT ----------------
+\\ ---------------- IMPORT ----------------
 
 Import:
     "import"_ ( "."_ Identifier )*->ImportModifiers Whitespace_ StringLiteral->ImportPath
 
-# ---------------- SPACE DEFINITION ----------------
+\\ ---------------- SPACE DEFINITION ----------------
 
 SpaceDefinition:
     SpaceHeader Newline_ IndentationIncrease_ SpaceBody IndentationDecrease_
@@ -39,7 +39,7 @@ SpaceBodyStatement(hidden):
     Pass
     SpaceDefinition
 
-# ---------------- INDENTATION ----------------
+\\ ---------------- INDENTATION ----------------
 
 IndentationCurrent:
     :IndentationStack.0:
@@ -50,7 +50,7 @@ IndentationIncrease:
 IndentationDecrease:
     ""{ pop IndentationStack }
 
-# ---------------- IDENTIFIER ----------------
+\\ ---------------- IDENTIFIER ----------------
 
 Identifier(fuse):
     IdentifierCharFirst IdentifierCharRemaining*
@@ -64,7 +64,7 @@ IdentifierCharRemaining(hidden):
     IdentifierCharFirst
     '09'
 
-# ---------------- LITERALS ----------------
+\\ ---------------- LITERALS ----------------
 
 StringLiteral(fuse):
     "\""_ StringLiteralChar* "\""_
@@ -74,7 +74,7 @@ StringLiteralChar(hidden):
     "\\\""
     "\""!
 
-# ---------------- COMMENTS ----------------
+\\ ---------------- COMMENTS ----------------
 
 CommentChain(hidden):
     Comment ( Newline_ Comment )*
@@ -89,7 +89,7 @@ CommentSingleLine(hidden fuse):
 CommentMultiLine(hidden fuse):
     Whitespace?_ "\\*" "*\\"!* "*\\"
 
-# ---------------- MISCELLANEOUS ----------------
+\\ ---------------- MISCELLANEOUS ----------------
 
 AlphaChar(hidden):
     'az'

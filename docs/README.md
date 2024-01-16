@@ -26,7 +26,7 @@
       - [Lookahead](#lookahead)
       - [Omit match](#omit-match)
       - [Replace match](#replace-match)
-    - [Matcher Executors](#matcher-executors)
+    - [Matcher Actions](#matcher-actions)
       - [Push](#push)
       - [Pop](#pop)
     - [Identifier](#identifier)
@@ -169,11 +169,11 @@ There are 7 types of matchers:
   - [Rule](#match-rule)
   - [Stack](#match-stack)
 
-It consists of one of the matcher types, optionally followed by [modifiers](#matcher-modifiers) and/or [executors](#matcher-executors).
+It consists of one of the matcher types, optionally followed by [modifiers](#matcher-modifiers) and/or [actions](#matcher-actions).
 
 >Syntax:
 >```qrawlr
->`matcher_type``modifiers``executors`
+>`matcher_type``modifiers``actions`
 >```
 >
 >Example:
@@ -320,9 +320,10 @@ It can be one of the following:
   - `?`: Match 0 or 1 times
   - `*`: Match 0 or more times
   - `+`: Match 1 or more times
+  - ``#`exact` ``: Match exactly `exact` times
+  - ``#`min`-`max` ``: Match between `min` and `max` times
   - ``#<`max` ``: Match between 0 and `max-1` times
   - ``#>`min` ``: Match at least `min+1` times
-  - ``#`min`-`max` ``: Match between `min` and `max` times
 
 #### Lookahead
 
@@ -376,14 +377,14 @@ The content can be one of the following:
 
 ---
 
-### Matcher Executors
+### Matcher Actions
 
-Matcher executors are used to execute a limited set of actions when a matcher matches. \
+Matcher actions are used to execute a limited set of actions when a matcher matches. \
 They are always placed directly after the [matcher modifiers](#matcher-modifiers). (No whitespace in between)
 
 >Syntax:
 >```qrawlr
->{`executor1`, `executor2`, ...}
+>{`actions1`, `action2`, ...}
 >```
 >
 >Example:

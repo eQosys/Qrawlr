@@ -1,4 +1,4 @@
-# ---------------- GRAMMAR ----------------
+\\ ---------------- GRAMMAR ----------------
 
 Grammar:
 	GrammarLine ( "\n"_ GrammarLine )*
@@ -8,7 +8,7 @@ GrammarLine(hidden):
 	Comment
 	Whitespace?_ "\n"~_
 
-# ---------------- RULE DEFINITION ----------------
+\\ ---------------- RULE DEFINITION ----------------
 
 RuleDefinition:
 	RuleHeader (Newline Whitespace)?_ RuleBody
@@ -19,7 +19,7 @@ RuleHeader:
 RuleBody:
 	RuleOptionDefinition (Newline_ Whitespace?_ RuleOptionDefinition)*
 
-# ---------------- RULE MODIFIERS ----------------
+\\ ---------------- RULE MODIFIERS ----------------
 
 RuleModifierList(hidden):
 	"("_ RuleModifier (Whitespace_ RuleModifier)* ")"_
@@ -28,15 +28,15 @@ RuleModifier:
 	"hidden"
 	"fuse"
 
-# ---------------- RULE OPTION ----------------
+\\ ---------------- RULE OPTION ----------------
 
 RuleOptionDefinition:
 	FullMatcher (Whitespace?_ FullMatcher)*
 
-# ---------------- MATCHERS ----------------
+\\ ---------------- MATCHERS ----------------
 
 FullMatcher:
-	Matcher MatcherModifiers MatcherExecutors?
+	Matcher MatcherModifiers MatcherActions?
 
 Matcher(hidden):
 	MatchAnyChar
@@ -63,12 +63,12 @@ MatchExact(fuse):
 	String
 
 MatchRule:
-	Identifier "^"?_->InsertContent
+	Identifier
 
 MatchStack:
 	":"_ Identifier "."_ Integer ":"_
 
-# ---------------- MATCHER MODIFIERS ----------------
+\\ ---------------- MATCHER MODIFIERS ----------------
 
 MatcherModifiers(hidden):
 	OptionModifierInvert? OptionModifierQuantifier? OptionModifierLookAhead? OptionModifierOmitMatch? OptionModifierReplaceMatch?
@@ -77,7 +77,11 @@ OptionModifierInvert:
 	"!"_
 
 OptionModifierQuantifier:
-	[ "?" "*" "+" ]
+	[ "?" "*" "+" ]->QuantifierSymbolic
+	("#"_ Integer "-"_ Integer)->QuantifierRange
+	("#"_ Integer)->QuantifierExact
+	("#"_ ">"_ Integer)->QuantifierLowerBound
+	("#"_ "<"_ Integer)->QuantifierUpperBound
 
 OptionModifierLookAhead:
 	"~"_
@@ -88,25 +92,25 @@ OptionModifierOmitMatch:
 OptionModifierReplaceMatch:
 	"->"_ [ Identifier String MatchStack ]
 
-# ---------------- MATCHER EXECUTORS ----------------
+\\ ---------------- MATCHER ACTIONS ----------------
 
-MatcherExecutors(hidden):
-	"{"_ RuleOptionExecutor (Whitespace?_ "," Whitespace?_ RuleOptionExecutor)* "}"_
+MatcherActions(hidden):
+	"{"_ MatcherAction (Whitespace?_ "," Whitespace?_ MatcherAction)* "}"_
 
-RuleOptionExecutor:
+MatcherAction:
 	Identifier Identifier
 
-# ---------------- IDENTIFIER ----------------
+\\ ---------------- IDENTIFIER ----------------
 
 Identifier(fuse):
 	AlphaChar AlnumChar*
 
-# ---------------- COMMENT ----------------
+\\ ---------------- COMMENT ----------------
 
 Comment(fuse):
 	"\\\\" "\n"!*
 
-# ---------------- MISCELLANEOUS ----------------
+\\ ---------------- MISCELLANEOUS ----------------
 
 MatchRangeChar:
 	"\\"? .
