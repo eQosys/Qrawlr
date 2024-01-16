@@ -151,7 +151,7 @@ AlnumChar(hidden):
     DecChar
 
 Newline(hidden):
-    "\n"
+    "\x0a"
 
 Whitespace(fuse):
     [ " " "\t" ]+

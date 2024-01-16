@@ -5,6 +5,10 @@ NAME_TYPE_RULE = "Rule name"
 NAME_TYPE_OPTIONAL = "Optional name"
 NAME_TYPE_STACK = "Stack name"
 
+OCT_DIGITS = "01234567"
+DEC_DIGITS = "0123456789"
+HEX_DIGITS = "0123456789abcdefABCDEF"
+
 class GrammarLoader:
     def __init__(self, filename: str) -> None:
         self.filename: str = filename
@@ -160,7 +164,7 @@ class GrammarLoader:
             if col+1 >= len(line):
                 raise self.__make_exception("Expected hex digit after '\\x'", col)
             
-            if not line[col].isxdigit() or not line[col+1].isxdigit():
+            if not line[col] in HEX_DIGITS or not line[col+1] in HEX_DIGITS:
                 raise self.__make_exception("Expected hex digit after '\\x'", col)
             
             return chr(int(line[col:col+2], 16)), col+2
@@ -214,7 +218,7 @@ class GrammarLoader:
             rule_options.append(self.__get_parse_rule_option(line, col))
 
         if len(rule_options) == 0:
-            raise self.__make_exception("Rule must have at least one option")
+            raise self.__make_exception("Rule must have at least one rule option")
 
         return rule_options
     
