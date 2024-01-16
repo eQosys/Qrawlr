@@ -70,7 +70,7 @@ class GrammarLoader:
         line = self.__get_next_line()
 
         rule.name, col = self.__get_parse_identifier(line, 0)
-        self.__check_if_rule_name_exists(rule.name, NAME_TYPE_RULE, col)
+        self.__check_if_rule_name_exists(rule.name, col)
         self.rules[rule.name] = None
         rule.anonymous, rule.fuse_children, line, col = self.__get_parse_rule_definition_header_modifiers(line, col)
 
