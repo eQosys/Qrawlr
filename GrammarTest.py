@@ -135,10 +135,10 @@ def test_code_generation():
 
 if __name__ == "__main__":
     try:
-        #test_algebra()
-        #test_qism()
-        #test_grammar()
-        #test_qinp()
+        test_algebra()
+        test_qism()
+        test_grammar()
+        test_qinp()
         test_code_generation()
     except GrammarException as e:
         print(f"Error: {e}")

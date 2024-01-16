@@ -67,7 +67,7 @@ class GrammarLoader:
 
     def __get_parse_rule_definition(self) -> Rule:
         rule = self.__get_parse_rule_definition_header()
-        rule.options = self.__get_parse_rule_definition_body()
+        rule.options = self.__get_parse_rule_options()
         return rule
 
     def __get_parse_rule_definition_header(self) -> Rule:
@@ -197,7 +197,7 @@ class GrammarLoader:
 
         return anonymous, fuse_children, line, col
     
-    def __get_parse_rule_definition_body(self) -> list[Matcher]:
+    def __get_parse_rule_options(self) -> list[Matcher]:
         rule_options: list[Matcher] = []
 
         while True:
@@ -211,81 +211,84 @@ class GrammarLoader:
                 if not line[col].isspace():
                     break
 
-            rule_option = MatcherMatchAll()
-            while col < len(line):
-                matcher, col = self.__get_parse_matcher(line, col)
-                if matcher is None:
-                    raise self.__make_exception("Expected rule option", col)
-                rule_option.options.append(matcher)
-
-            rule_options.append(rule_option)
+            rule_options.append(self.__get_parse_rule_option(line, col))
 
         if len(rule_options) == 0:
             raise self.__make_exception("Rule must have at least one option")
 
         return rule_options
+    
+    def __get_parse_rule_option(self, line: str, col: int) -> Matcher:
+        rule_option = MatcherMatchAll()
+        while col < len(line):
+            matcher, col = self.__get_parse_matcher(line, col)
+            if matcher is None:
+                raise self.__make_exception("Expected matcher", col)
+            rule_option.options.append(matcher)
+        
+        return rule_option
 
     def __get_parse_matcher(self, line: str, col: int) -> (Matcher, int):      
         if line[col] == ".":
-            option, col = self.__get_parse_matcher_match_any_char(line, col+1)
+            matcher, col = self.__get_parse_matcher_match_any_char(line, col+1)
         elif line[col] == "(":
-            option, col = self.__get_parse_matcher_match_all(line, col+1)
+            matcher, col = self.__get_parse_matcher_match_all(line, col+1)
         elif line[col] == "[":
-            option, col = self.__get_parse_matcher_match_any(line, col+1)
+            matcher, col = self.__get_parse_matcher_match_any(line, col+1)
         elif line[col] == "'":
-            option, col = self.__get_parse_matcher_match_range(line, col+1)
+            matcher, col = self.__get_parse_matcher_match_range(line, col+1)
         elif line[col] == "\"":
-            option, col = self.__get_parse_matcher_match_exact(line, col+1)
+            matcher, col = self.__get_parse_matcher_match_exact(line, col+1)
         elif line[col] == ":":
-            option, col = self.__get_parse_matcher_match_stack(line, col+1)
+            matcher, col = self.__get_parse_matcher_match_stack(line, col+1)
         else:
-            option, col = self.__get_parse_matcher_match_rule(line, col)
+            matcher, col = self.__get_parse_matcher_match_rule(line, col)
 
-        if option is None:
+        if matcher is None:
             return None, col
 
-        col = self.__parse_matcher_modifiers(line, col, option)
+        col = self.__parse_matcher_modifiers(line, col, matcher)
         col = self.__parse_whitespace(line, col, True)
 
-        col = self.__parse_matcher_actions(line, col, option)
+        col = self.__parse_matcher_actions(line, col, matcher)
         col = self.__parse_whitespace(line, col, True)
 
-        return option, col
+        return matcher, col
     
     def __get_parse_matcher_match_any_char(self, line: str, col: int) -> (MatcherMatchAnyChar, int):
         return MatcherMatchAnyChar(), col
 
     def __get_parse_matcher_match_all(self, line: str, col: int) -> (MatcherMatchAll, int):
-        option = MatcherMatchAll()
+        matcher = MatcherMatchAll()
 
         col = self.__parse_whitespace(line, col, True)
 
         while col < len(line) and line[col] != ")":
-            sub_option, col = self.__get_parse_matcher(line, col)
-            if sub_option is None:
+            sub_matcher, col = self.__get_parse_matcher(line, col)
+            if sub_matcher is None:
                 return None, col
-            option.options.append(sub_option)
+            matcher.options.append(sub_matcher)
 
         if col >= len(line):
             raise self.__make_exception("Expected closing ')'", col)
 
-        return option, col+1
+        return matcher, col+1
     
     def __get_parse_matcher_match_any(self, line: str, col: int) -> (MatcherMatchAny, int):
-        option = MatcherMatchAny()
+        matcher = MatcherMatchAny()
 
         col = self.__parse_whitespace(line, col, True)
 
         while col < len(line) and line[col] != "]":
-            sub_option, col = self.__get_parse_matcher(line, col)
-            if sub_option is None:
+            sub_matcher, col = self.__get_parse_matcher(line, col)
+            if sub_matcher is None:
                 return None, col
-            option.options.append(sub_option)
+            matcher.options.append(sub_matcher)
 
         if col >= len(line):
             raise self.__make_exception("Expected closing ']'", col)
 
-        return option, col+1
+        return matcher, col+1
     
     def __get_parse_matcher_match_range(self, line: str, col: int) -> (MatcherMatchRange, int):
         if col >= len(line):
@@ -346,15 +349,15 @@ class GrammarLoader:
         
         return MatcherMatchRule(name), col
 
-    def __parse_matcher_modifiers(self, line: str, col: int, option: Matcher) -> int:
-        option.inverted, col = self.__get_parse_matcher_modifier_inverted(line, col)
-        (option.count_min, option.count_max), col = self.__get_parse_matcher_modifier_quantifier(line, col)
-        option.look_ahead, col = self.__get_parse_matcher_modifier_look_ahead(line, col)
-        option.omit_match, col = self.__get_parse_matcher_modifier_omit_match(line, col)
-        option.match_repl, col = self.__get_parse_matcher_modifier_match_replacement(line, col)
+    def __parse_matcher_modifiers(self, line: str, col: int, matcher: Matcher) -> int:
+        matcher.inverted, col = self.__get_parse_matcher_modifier_inverted(line, col)
+        (matcher.count_min, matcher.count_max), col = self.__get_parse_matcher_modifier_quantifier(line, col)
+        matcher.look_ahead, col = self.__get_parse_matcher_modifier_look_ahead(line, col)
+        matcher.omit_match, col = self.__get_parse_matcher_modifier_omit_match(line, col)
+        matcher.match_repl, col = self.__get_parse_matcher_modifier_match_replacement(line, col)
         return col
 
-    def __parse_matcher_actions(self, line: str, col: int, option: Matcher) -> int:
+    def __parse_matcher_actions(self, line: str, col: int, matcher: Matcher) -> int:
         if col >= len(line) or line[col] != "{":
             return col
         col += 1
@@ -369,7 +372,7 @@ class GrammarLoader:
             self.stack_names.add(stack_name)
             col = self.__parse_whitespace(line, col, True)
             
-            option.actions.append((exec_name, stack_name))
+            matcher.actions.append((exec_name, stack_name))
 
             if line[col] != ",":
                 break

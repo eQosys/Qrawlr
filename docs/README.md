@@ -159,7 +159,7 @@ A rule option is treated as if surrounded by parenthesis denoting a [match all](
 
 ### Matcher
 
-A matcher is the smalles unit of a [rule option](#match-option). \
+A matcher is the smallest unit of a [rule option](#match-option). \
 There are 7 types of matchers:
   - [Any char](#match-any-char)
   - [All](#match-all)

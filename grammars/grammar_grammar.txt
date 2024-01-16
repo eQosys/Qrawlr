@@ -71,25 +71,25 @@ MatchStack:
 \\ ---------------- MATCHER MODIFIERS ----------------
 
 MatcherModifiers(hidden):
-	OptionModifierInvert? OptionModifierQuantifier? OptionModifierLookAhead? OptionModifierOmitMatch? OptionModifierReplaceMatch?
+	MatcherModifierInvert? MatcherModifierQuantifier? MatcherModifierLookAhead? MatcherModifierOmitMatch? MatcherModifierReplaceMatch?
 
-OptionModifierInvert:
+MatcherModifierInvert:
 	"!"_
 
-OptionModifierQuantifier:
+MatcherModifierQuantifier:
 	[ "?" "*" "+" ]->QuantifierSymbolic
 	("#"_ Integer "-"_ Integer)->QuantifierRange
 	("#"_ Integer)->QuantifierExact
 	("#"_ ">"_ Integer)->QuantifierLowerBound
 	("#"_ "<"_ Integer)->QuantifierUpperBound
 
-OptionModifierLookAhead:
+MatcherModifierLookAhead:
 	"~"_
 
-OptionModifierOmitMatch:
+MatcherModifierOmitMatch:
 	"_"_
 
-OptionModifierReplaceMatch:
+MatcherModifierReplaceMatch:
 	"->"_ [ Identifier String MatchStack ]
 
 \\ ---------------- MATCHER ACTIONS ----------------
