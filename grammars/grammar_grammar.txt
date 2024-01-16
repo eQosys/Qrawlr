@@ -48,13 +48,13 @@ Matcher(hidden):
 	MatchStack
 
 MatchAnyChar:
-	"."
+	"."_
 
 MatchAll(fuse):
-	"("_ Whitespace?_ RuleOptionDefinition Whitespace?_ ")"_
+	"("_ Whitespace?_ FullMatcher (Whitespace?_ FullMatcher)* Whitespace?_ ")"_
 
 MatchAny:
-	"["_ Whitespace?_ RuleOptionDefinition Whitespace?_ "]"_
+	"["_ Whitespace?_ FullMatcher (Whitespace?_ FullMatcher)* Whitespace?_ "]"_
 
 MatchRange:
 	"'"_ MatchRangeChar#2 "'"_
@@ -118,8 +118,9 @@ MatchRangeChar:
 String(fuse):
 	"\""_ StringChar* "\""_
 
-Integer:
+Integer(fuse):
 	"0x"_ HexChar+ ""_->FormatHex
+	"0b"_ BinChar+ ""_->FormatBin
 	"0"_ OctChar+ ""_->FormatOct
 	DecChar+ ""_->FormatDec
 
@@ -139,6 +140,9 @@ HexChar(hidden):
 	'09'
 	'af'
 	'AF'
+
+BinChar(hidden):
+	'01'
 
 OctChar(hidden):
 	'07'

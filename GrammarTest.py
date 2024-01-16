@@ -100,7 +100,7 @@ def test_grammar():
     with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/grammar_grammar.txt", "Grammar", text, filename, verbose = False)
+    run_test("grammars/grammar_grammar.txt", "Grammar", text, filename, verbose = True)
 
 def test_qism():
     filename = "test_files/bootloader.qsm"
@@ -115,6 +115,11 @@ def test_qinp():
         text = f.read()
 
     run_test("grammars/qinp_grammar.txt", "GlobalCode", text, filename, verbose = True)
+
+def test_integer_list():
+    text = "0 1 2 3 12 0x12 054 00"
+
+    run_test("grammars/integer_list_grammar.txt", "IntegerList", text, verbose = True)
 
 def test_code_generation():
     g = Grammar("grammars/grammar_grammar.txt")
@@ -139,6 +144,7 @@ if __name__ == "__main__":
         #test_qism()
         test_grammar()
         #test_qinp()
+        #test_integer_list()
         #test_code_generation()
     except GrammarException as e:
         print(f"Error: {e}")
