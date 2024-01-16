@@ -7,15 +7,26 @@ from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 def load_dynamic_grammar():
     raise GrammarException("this_is_a_test_code_name should have been replaced by code generation")
 
-def write_tree_graphviz(tree: ParseTree, verbose):
+def make_output_dir():
+    os.makedirs("output", exist_ok = True)
+
+def path_to_name(path: str):
+    return path.replace("/", "::")
+
+def path_to_output_filename(path: str, extension: str):
+    return os.path.join("output", path_to_name(path + extension))
+
+def write_tree_graphviz(tree: ParseTree, filename: str, verbose: bool):
     print("  INFO: Writing tree to tree.gv... ", end="", flush=True)
-    with open("tree.gv", "w") as f:
+    make_output_dir()
+    with open(path_to_output_filename(filename, ".gv"), "w") as f:
         f.write(tree.to_digraph(verbose).source)
     print("DONE")
 
-def render_tree(tree: ParseTree, verbose):
+def render_tree(tree: ParseTree, filename: str, verbose: bool):
     print("  INFO: Rendering tree to tree.pdf... ", end="", flush=True)
-    tree.to_digraph(verbose).render(format="pdf", outfile="tree.pdf")
+    make_output_dir()
+    tree.to_digraph(verbose).render(format="pdf", outfile=path_to_output_filename(filename, ".pdf"), cleanup=True)
     print("DONE")
 
 def evaluate_expression(tree: ParseTree):
@@ -64,7 +75,7 @@ def evaluate_expression(tree: ParseTree):
     else:
         raise GrammarException("Expected ParseTreeNode but got", type(tree))
 
-def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None, verbose: bool = True, write_tree: bool = True):
+def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None, verbose: bool = True, do_write_tree: bool = False, do_render_tree: bool = True):
     print(f"INFO: Testing {grammarfile} on {filename}")
     
     g = Grammar(grammarfile)
@@ -84,9 +95,10 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None,
     else:
         print("  INFO: Fully parsed text")
 
-    if write_tree:
-        write_tree_graphviz(tree, verbose)
-        render_tree(tree, verbose)
+    if do_render_tree:
+        render_tree(tree, filename, verbose)
+    if do_write_tree:
+        write_tree_graphviz(tree, filename, verbose)
 
     return tree
 
@@ -107,7 +119,7 @@ def test_grammar():
             with open(path, "r") as f:
                 text = f.read()
 
-            run_test("grammars/grammar_grammar.txt", "Grammar", text, path, verbose = True, write_tree = False)
+            run_test("grammars/grammar_grammar.txt", "Grammar", text, path, verbose = True, do_render_tree = True)
 
 def test_qism():
     filename = "test_files/bootloader.qsm"
