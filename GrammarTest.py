@@ -1,3 +1,4 @@
+import os
 import json
 from Grammar import Grammar, GrammarException
 from GrammarTools import index_to_line_and_column
@@ -7,13 +8,13 @@ def load_dynamic_grammar():
     raise GrammarException("this_is_a_test_code_name should have been replaced by code generation")
 
 def write_tree_graphviz(tree: ParseTree, verbose):
-    print("INFO: Writing tree to tree.gv... ", end="", flush=True)
+    print("  INFO: Writing tree to tree.gv... ", end="", flush=True)
     with open("tree.gv", "w") as f:
         f.write(tree.to_digraph(verbose).source)
     print("DONE")
 
 def render_tree(tree: ParseTree, verbose):
-    print("INFO: Rendering tree to tree.pdf... ", end="", flush=True)
+    print("  INFO: Rendering tree to tree.pdf... ", end="", flush=True)
     tree.to_digraph(verbose).render(format="pdf", outfile="tree.pdf")
     print("DONE")
 
@@ -63,26 +64,29 @@ def evaluate_expression(tree: ParseTree):
     else:
         raise GrammarException("Expected ParseTreeNode but got", type(tree))
 
-def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None, verbose: bool = True):
+def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None, verbose: bool = True, write_tree: bool = True):
+    print(f"INFO: Testing {grammarfile} on {filename}")
+    
     g = Grammar(grammarfile)
 
     tree = g.apply_to(text, entry_rule)
     
     if tree is None or tree.length < len(text):
-        print(f"Max index: {g.ruleset.farthest_match_index}", end="" if filename else "\n")
+        print("  ERROR: Text was not fully parsed")
+        print(f"    Max index: {g.ruleset.farthest_match_index}", end="" if filename else "\n")
         if filename:
             line, col = index_to_line_and_column(text, g.ruleset.farthest_match_index)
             print(f" -> {filename}:{line}:{col}")
-        print(f"Remaining text: {repr(text[g.ruleset.farthest_match_index:][:32])}")
-        print("WARN: Text was not fully parsed")
+        print(f"    Remaining text: {repr(text[g.ruleset.farthest_match_index:][:32])}")
 
         if tree is None:
             raise GrammarException("Could not parse text")
     else:
-        print("INFO: Fully parsed text")
+        print("  INFO: Fully parsed text")
 
-    write_tree_graphviz(tree, verbose)
-    render_tree(tree, verbose)
+    if write_tree:
+        write_tree_graphviz(tree, verbose)
+        render_tree(tree, verbose)
 
     return tree
 
@@ -93,14 +97,17 @@ def test_algebra():
 
     result = evaluate_expression(tree)
 
-    print(f"INFO: {expression} = {result}")
+    print(f"  INFO: result = {result}")
+    print(f"        reference = {eval(expression.replace('/', '//'))}")
 
 def test_grammar():
-    filename = "grammars/grammar_grammar.txt"
-    with open(filename, "r") as f:
-        text = f.read()
+    for filename in os.listdir("grammars"):
+        if filename.endswith(".txt"):
+            path = os.path.join("grammars", filename)
+            with open(path, "r") as f:
+                text = f.read()
 
-    run_test("grammars/grammar_grammar.txt", "Grammar", text, filename, verbose = True)
+            run_test("grammars/grammar_grammar.txt", "Grammar", text, path, verbose = True, write_tree = False)
 
 def test_qism():
     filename = "test_files/bootloader.qsm"
@@ -147,4 +154,4 @@ if __name__ == "__main__":
         #test_integer_list()
         #test_code_generation()
     except GrammarException as e:
-        print(f"Error: {e}")
+        print(f"  ERROR: {e}")

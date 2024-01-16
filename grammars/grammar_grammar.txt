@@ -11,13 +11,13 @@ GrammarLine(hidden):
 \\ ---------------- RULE DEFINITION ----------------
 
 RuleDefinition:
-	RuleHeader (Newline Whitespace)?_ RuleBody
+	RuleHeader [ (Newline Whitespace) Whitespace? ]_ RuleBody
 
 RuleHeader:
 	Identifier RuleModifierList?_ ":"_
 
 RuleBody:
-	RuleOptionDefinition (Newline_ Whitespace?_ RuleOptionDefinition)*
+	RuleOptionDefinition (Newline_ Whitespace_ RuleOptionDefinition)*
 
 \\ ---------------- RULE MODIFIERS ----------------
 
@@ -95,10 +95,10 @@ MatcherModifierReplaceMatch:
 \\ ---------------- MATCHER ACTIONS ----------------
 
 MatcherActions(hidden):
-	"{"_ MatcherAction (Whitespace?_ "," Whitespace?_ MatcherAction)* "}"_
+	"{"_ Whitespace?_ MatcherAction (Whitespace?_ "," Whitespace?_ MatcherAction)* Whitespace?_ "}"_
 
 MatcherAction:
-	Identifier Identifier
+	Identifier Whitespace_ Identifier
 
 \\ ---------------- IDENTIFIER ----------------
 
