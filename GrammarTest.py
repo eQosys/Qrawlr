@@ -146,19 +146,20 @@ def test_integer_list():
     run_test("grammars/integer_list_grammar.txt", "IntegerList", text, verbose = True)
 
 def test_code_generation():
-    g = Grammar("grammars/grammar_grammar.txt")
+    g = Grammar("grammars/qinp_grammar.txt")
     pre_str = str(g)
 
     exec(g.generate_python_code("load_dynamic_grammar"), globals())
     g = load_dynamic_grammar()
     post_str = str(g)
+    
+    print("Pre:")
+    print(" ", pre_str.replace("\n", "\n  "))
+    print("Post:")
+    print(" ", post_str.replace("\n", "\n  "))
 
     if pre_str != post_str:
         print("ERROR: Grammar strings do not match")
-        print("Pre:")
-        print(" ", pre_str.replace("\n", "\n  "))
-        print("Post:")
-        print(" ", post_str.replace("\n", "\n  "))
     else:
         print("INFO: Grammar strings match")
 
@@ -166,9 +167,9 @@ if __name__ == "__main__":
     try:
         #test_algebra()
         #test_qism()
-        test_grammar(False)
+        #test_grammar(False)
         #test_qinp()
         #test_integer_list()
-        #test_code_generation()
+        test_code_generation()
     except GrammarException as e:
         print(f"  ERROR: {e}")

@@ -108,8 +108,8 @@ class Matcher(ABC):
     
     def _action_args_to_arg_str(self, action_args: list[tuple[int, None]]) -> str:
         args = []
-        for (type_name, value) in action_args:
-            args.append(f"(\"{escape_string(type_name)}\", \"{value}\")")
+        for (type_id, value) in action_args:
+            args.append(f"({type_id}, \"{value}\")")
         return f"[{', '.join(args)}]"
 
     def _apply_optional_invert(self, string: str, index_old: int, index_new: int, tree: ParseTree) -> tuple[ParseTree, int]:
@@ -317,15 +317,15 @@ class Matcher(ABC):
     def _action_args_to_str(self, action_args: list[tuple[str, None]]) -> str:
         args = []
 
-        for (type_name, value) in action_args:
-            if type_name == "str":
+        for (type_id, value) in action_args:
+            if type_id == ACTION_ARG_TYPE_STRING:
                 args.append(f"\"{escape_string(value)}\"")
-            elif type_name == "match":
+            elif type_id == ACTION_ARG_TYPE_MATCH:
                 args.append("_")
-            elif type_name == "ident":
+            elif type_id == ACTION_ARG_TYPE_IDENTIFIER:
                 args.append(value)
             else:
-                raise GrammarException(f"Unknown action argument type '{type_name}'")
+                raise GrammarException(f"Unknown action argument type '{type_id}'")
 
         return f"{', '.join(args)}"
 

@@ -44,20 +44,11 @@ class GrammarLoader:
             except IndexError:
                 break
 
-        self.ruleset = RuleSet(self.rules, self.stack_names)
+        self.ruleset = RuleSet(self.rules)
 
-    def __check_if_name_exists(self, name: str, name_type: str, col: int, exclude_own_type: bool = False) -> None:
-        namesets = (
-            (NAME_TYPE_RULE, self.rules.keys()),
-            (NAME_TYPE_OPTIONAL, self.optional_names),
-            (NAME_TYPE_STACK, self.stack_names)
-        )
-
-        for other_type, names in namesets:
-            if exclude_own_type and name_type == other_type:
-                continue
-            if name in names:
-                raise self.__make_exception(f"{name_type} '{name}' already exists as {other_type.lower()}", col)
+    def __check_if_rule_name_exists(self, name: str, col: int) -> None:
+        if name in self.rules.keys():
+            raise self.__make_exception(f"'{name}' already exists", col)
 
     def __check_for_unknown_references(self) -> None:
         err_msgs = []
@@ -79,7 +70,7 @@ class GrammarLoader:
         line = self.__get_next_line()
 
         rule.name, col = self.__get_parse_identifier(line, 0)
-        self.__check_if_name_exists(rule.name, NAME_TYPE_RULE, col)
+        self.__check_if_rule_name_exists(rule.name, NAME_TYPE_RULE, col)
         self.rules[rule.name] = None
         rule.anonymous, rule.fuse_children, line, col = self.__get_parse_rule_definition_header_modifiers(line, col)
 
@@ -325,8 +316,6 @@ class GrammarLoader:
     
     def __get_parse_matcher_match_stack(self, line: str, col: int) -> (MatcherMatchStack, int):
         name, col = self.__get_parse_identifier(line, col)
-        self.__check_if_name_exists(name, NAME_TYPE_STACK, col, True)
-        self.stack_names.add(name)
 
         if col >= len(line) or line[col] != ".":
             raise self.__make_exception("Expected '.'", col)
@@ -553,7 +542,6 @@ class GrammarLoader:
             return (MATCH_REPL_STACK, f"{rOpt.name}.{rOpt.index}"), col
 
         name, col = self.__get_parse_identifier(line, col)
-        self.__check_if_name_exists(name, NAME_TYPE_OPTIONAL, col, True)
         self.optional_names.add(name)
         return (MATCH_REPL_IDENTIFIER, name), col
 

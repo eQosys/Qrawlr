@@ -510,8 +510,8 @@ It is used to store matched strings for later use.
 
 ### Name collision
 
-[Rule](#rule-definition) names, [stack](#stack) names and [match replacement](#replace-match) names share the same namespace. \
-This means that a rule name cannot be the same as a stack name or match replacement name and vice versa.
+[Rule](#rule-definition) names, [stack](#stack) names and [match replacement](#replace-match) names are kept in separate namespaces. \
+This means that a rule name can be the same as a stack name or match replacement name and vice versa.
 
 ---
 
