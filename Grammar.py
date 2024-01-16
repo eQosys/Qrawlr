@@ -11,12 +11,12 @@ class Grammar:
         if filename is not None:
             self.ruleset = GrammarLoader(filename).ruleset
 
-    def apply_to(self, string: str, rule: str) -> ParseTree:
+    def apply_to(self, string: str, rule: str, filename: str) -> ParseTree:
         if rule not in self.ruleset.rules:
             raise GrammarException(f"Rule '{rule}' not found")
         
         self.ruleset.reset()
-        tree, index = self.ruleset.rules[rule].match(string, 0, self.ruleset)
+        tree, index = self.ruleset.rules[rule].match(string, 0, self.ruleset, filename)
 
         if tree is not None:
             tree.name = rule

@@ -366,13 +366,7 @@ class GrammarLoader:
         col = self.__parse_whitespace(line, col, True)
 
         while col < len(line) and line[col] != "}":
-            exec_name, col = self.__get_parse_identifier(line, col)
-            col = self.__parse_whitespace(line, col, False)
-            
-            stack_name, col = self.__get_parse_identifier(line, col)
-            self.stack_names.add(stack_name)
-            matcher.actions.append((exec_name, stack_name))
-
+            col = self.__parse_matcher_action_trigger(line, col, matcher)
             col = self.__parse_whitespace(line, col, True)
 
             if col >= len(line) or line[col] != ",":
@@ -383,8 +377,89 @@ class GrammarLoader:
 
         if col >= len(line) or line[col] != "}":
             raise self.__make_exception("Expected closing '}'", col)
+        col += 1
 
-        return col+1
+        return col
+    
+    def __parse_matcher_action_trigger(self, line: str, col: int, matcher: Matcher) -> int:
+        trigger_name, col = self.__get_parse_identifier(line, col)
+        if not trigger_name in ACTION_TRIGGERS:
+            raise self.__make_exception(f"Unknown action trigger '{trigger_name}'", col)
+
+        col = self.__parse_whitespace(line, col, True)
+
+        if col >= len(line) or line[col] != ":":
+            raise self.__make_exception("Expected ':'", col)
+        
+        col = self.__parse_whitespace(line, col+1, True)
+
+        if col >= len(line):
+            raise self.__make_exception("Expected at least one action", col)
+
+        if is_action_list := line[col] == "[":
+            col += 1
+            col = self.__parse_whitespace(line, col, True)
+
+        while col < len(line) and line[col] != "]":
+            col = self.__parse_matcher_action(line, col, matcher, trigger_name)
+
+            if not is_action_list:
+                break
+
+            col = self.__parse_whitespace(line, col, True)
+
+            if col >= len(line) or line[col] != ",":
+                break
+            col += 1
+
+            col = self.__parse_whitespace(line, col, True)
+
+        if is_action_list:
+            if col >= len(line) or line[col] != "]":
+                raise self.__make_exception("Expected closing ']'", col)
+            col += 1
+
+        return col
+
+    def __parse_matcher_action(self, line: str, col: int, matcher: Matcher, trigger_name: str) -> int:
+        action_name, col = self.__get_parse_identifier(line, col)
+        col = self.__parse_whitespace(line, col, True)
+
+        if col >= len(line) or line[col] != "(":
+            raise self.__make_exception("Expected '('", col)
+        col += 1
+        
+        col = self.__parse_whitespace(line, col, True)
+
+        args = []
+        while col < len(line) and line[col] != ")":
+            if line[col] == "\"":
+                arg, col = self.__get_parse_literal_string(line, col+1)
+                args.append((ACTION_ARG_TYPE_STRING, arg))
+            elif line[col] == "_":
+                col += 1
+                args.append((ACTION_ARG_TYPE_MATCH, None))
+            else:
+                arg, col = self.__get_parse_identifier(line, col)
+                args.append((ACTION_ARG_TYPE_IDENTIFIER, arg))
+            
+            col = self.__parse_whitespace(line, col, True)
+
+            if col >= len(line) or line[col] != ",":
+                break
+            col += 1
+
+            col = self.__parse_whitespace(line, col, True)
+
+        if col >= len(line) or line[col] != ")":
+            raise self.__make_exception("Expected closing ')'", col)
+        col += 1
+
+        actions = matcher.actions.get(trigger_name, [])
+        actions.append((action_name, args))
+        matcher.actions[trigger_name] = actions
+        
+        return col
 
     def __get_parse_matcher_modifier_inverted(self, line: str, col: int) -> (bool, int):
         if col < len(line) and line[col] == "!":

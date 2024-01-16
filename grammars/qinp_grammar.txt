@@ -45,10 +45,10 @@ IndentationCurrent:
     :IndentationStack.0:
 
 IndentationIncrease:
-    ( IndentationCurrent Whitespace ){ push IndentationStack }
+    ( IndentationCurrent Whitespace ){ onMatch: push(_, IndentationStack) }
 
 IndentationDecrease:
-    ""{ pop IndentationStack }
+    ""{ onMatch: pop(IndentationStack) }
 
 \\ ---------------- IDENTIFIER ----------------
 

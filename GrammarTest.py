@@ -1,7 +1,7 @@
 import os
 import json
 from Grammar import Grammar, GrammarException
-from GrammarTools import index_to_line_and_column
+from GrammarTools import index_to_position
 from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 
 def load_dynamic_grammar():
@@ -80,13 +80,13 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None,
     
     g = Grammar(grammarfile)
 
-    tree = g.apply_to(text, entry_rule)
+    tree = g.apply_to(text, entry_rule, filename)
     
     if tree is None or tree.length < len(text):
         print("  ERROR: Text was not fully parsed")
         print(f"    Max index: {g.ruleset.farthest_match_index}", end="" if filename else "\n")
         if filename:
-            line, col = index_to_line_and_column(text, g.ruleset.farthest_match_index)
+            line, col = index_to_position(text, g.ruleset.farthest_match_index)
             print(f" -> {filename}:{line}:{col}")
         print(f"    Remaining text: {repr(text[g.ruleset.farthest_match_index:][:32])}")
 
@@ -112,14 +112,19 @@ def test_algebra():
     print(f"  INFO: result = {result}")
     print(f"        reference = {eval(expression.replace('/', '//'))}")
 
-def test_grammar():
+def test_grammar(self_only):
+    grammar_path = "grammars/grammar_grammar.txt"
+
     for filename in os.listdir("grammars"):
         if filename.endswith(".txt"):
             path = os.path.join("grammars", filename)
+            if self_only and path != grammar_path:
+                continue
+
             with open(path, "r") as f:
                 text = f.read()
 
-            run_test("grammars/grammar_grammar.txt", "Grammar", text, path, verbose = True, do_render_tree = True)
+            run_test(grammar_path, "Grammar", text, path, verbose = True, do_render_tree = True)
 
 def test_qism():
     filename = "test_files/bootloader.qsm"
@@ -161,7 +166,7 @@ if __name__ == "__main__":
     try:
         #test_algebra()
         #test_qism()
-        test_grammar()
+        test_grammar(False)
         #test_qinp()
         #test_integer_list()
         #test_code_generation()

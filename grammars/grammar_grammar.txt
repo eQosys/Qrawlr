@@ -78,10 +78,10 @@ MatcherModifierInvert:
 
 MatcherModifierQuantifier:
 	[ "?" "*" "+" ]->QuantifierSymbolic
-	("#"_ Integer "-"_ Integer)->QuantifierRange
-	("#"_ Integer)->QuantifierExact
-	("#"_ ">"_ Integer)->QuantifierLowerBound
-	("#"_ "<"_ Integer)->QuantifierUpperBound
+	( "#"_ Integer "-"_ Integer )->QuantifierRange
+	( "#"_ Integer )->QuantifierExact
+	( "#"_ ">"_ Integer )->QuantifierLowerBound
+	( "#"_ "<"_ Integer )->QuantifierUpperBound
 
 MatcherModifierLookAhead:
 	"~"_
@@ -95,10 +95,25 @@ MatcherModifierReplaceMatch:
 \\ ---------------- MATCHER ACTIONS ----------------
 
 MatcherActions(hidden):
-	"{"_ Whitespace?_ MatcherAction (Whitespace?_ "," Whitespace?_ MatcherAction)* Whitespace?_ "}"_
+	"{"_ Whitespace?_ ( MatcherTrigger ( Whitespace?_ ","_ Whitespace?_ MatcherTrigger )* Whitespace?_ )? "}"_
+
+MatcherTrigger:
+	Identifier Whitespace?_ ":"_ Whitespace?_ MatcherActionList
+
+MatcherActionList:
+	"["_ Whitespace?_ ( MatcherAction ( Whitespace?_ ","_ Whitespace?_ MatcherAction )* Whitespace?_ ) "]"_
+	MatcherAction
 
 MatcherAction:
-	Identifier Whitespace_ Identifier
+	Identifier Whitespace?_ MatcherActionArgumentList
+
+MatcherActionArgumentList:
+	"("_ Whitespace?_ ( MatcherActionArgument ( Whitespace?_ ","_ Whitespace?_ MatcherActionArgument )* Whitespace?_ ) ")"_
+
+MatcherActionArgument:
+	Identifier
+	String
+	"_"_->MatchedText
 
 \\ ---------------- IDENTIFIER ----------------
 
