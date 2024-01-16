@@ -1,12 +1,12 @@
 \\ ---------------- GRAMMAR ----------------
 
 Grammar:
-	GrammarLine ( "\n"_ GrammarLine )*
+	GrammarLine ( Newline_ GrammarLine )*
 
 GrammarLine(hidden):
 	RuleDefinition Whitespace?_ Comment?
 	Comment
-	Whitespace?_ "\n"~_
+	Whitespace?_ Newline~_
 
 \\ ---------------- RULE DEFINITION ----------------
 
@@ -108,7 +108,7 @@ Identifier(fuse):
 \\ ---------------- COMMENT ----------------
 
 Comment(fuse):
-	"\\\\" "\n"!*
+	"\\\\" Newline!*
 
 \\ ---------------- MISCELLANEOUS ----------------
 
@@ -159,3 +159,5 @@ Newline(hidden):
 
 Whitespace(fuse):
     [ " " "\t" ]+
+
+\\ COMMENT @ END OF LINE
