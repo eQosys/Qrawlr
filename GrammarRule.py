@@ -36,10 +36,6 @@ class Matcher(ABC):
         self.actions     = list(initializers.actions)
 
     def match(self, string: str, index: int, ruleset: "RuleSet") -> tuple[ParseTree, int]:
-        if isinstance(self, MatcherMatchExact):
-            if self.value == "\\\"":
-                pass
-
         old_index = index
         tree = ParseTreeNode(*index_to_line_and_column(string, index))
         match_count = 0

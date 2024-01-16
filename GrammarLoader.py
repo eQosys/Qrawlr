@@ -83,7 +83,7 @@ class GrammarLoader:
         self.rules[rule.name] = None
         rule.anonymous, rule.fuse_children, line, col = self.__get_parse_rule_definition_header_modifiers(line, col)
 
-        if line[col] != ":":
+        if col >= len(line) or line[col] != ":":
             raise self.__make_exception("Expected ':' after rule name", col)
         col += 1
 
@@ -175,16 +175,13 @@ class GrammarLoader:
         anonymous = False
         fuse_children = False
 
-        if col >= len(line):
-            return anonymous, fuse_children, line, col
-
-        if line[col] != "(":
+        if col >= len(line) or line[col] != "(":
             return anonymous, fuse_children, line, col
         col += 1
 
         col = self.__parse_whitespace(line, col, True)
         
-        while line[col] != ")":
+        while col < len(line) and line[col] != ")":
             param, col = self.__get_parse_identifier(line, col)
             if param == "hidden":
                 anonymous = True
@@ -195,7 +192,7 @@ class GrammarLoader:
             
             col = self.__parse_whitespace(line, col, True)
 
-        if line[col] != ")":
+        if col >= len(line) or line[col] != ")":
             raise self.__make_exception("Expected closing ')'", col)
         col += 1
 
@@ -331,13 +328,13 @@ class GrammarLoader:
         self.__check_if_name_exists(name, NAME_TYPE_STACK, col, True)
         self.stack_names.add(name)
 
-        if line[col] != ".":
+        if col >= len(line) or line[col] != ".":
             raise self.__make_exception("Expected '.'", col)
         col += 1
 
         index, col = self.__get_parse_literal_integer(line, col)
 
-        if line[col] != ":":
+        if col >= len(line) or line[col] != ":":
             raise self.__make_exception("Expected ':'", col)
 
         return MatcherMatchStack(name, index), col+1
@@ -368,20 +365,23 @@ class GrammarLoader:
 
         col = self.__parse_whitespace(line, col, True)
 
-        while line[col] != "}":
+        while col < len(line) and line[col] != "}":
             exec_name, col = self.__get_parse_identifier(line, col)
             col = self.__parse_whitespace(line, col, False)
             
             stack_name, col = self.__get_parse_identifier(line, col)
             self.stack_names.add(stack_name)
-            col = self.__parse_whitespace(line, col, True)
-            
             matcher.actions.append((exec_name, stack_name))
 
-            if line[col] != ",":
-                break
+            col = self.__parse_whitespace(line, col, True)
 
-        if line[col] != "}":
+            if col >= len(line) or line[col] != ",":
+                break
+            col += 1
+
+            col = self.__parse_whitespace(line, col, True)
+
+        if col >= len(line) or line[col] != "}":
             raise self.__make_exception("Expected closing '}'", col)
 
         return col+1
@@ -391,7 +391,7 @@ class GrammarLoader:
             return True, col+1
         return False, col
 
-    def __get_parse_matcher_modifier_quantifier(self, line: str, col: int) -> (str, int):
+    def __get_parse_matcher_modifier_quantifier(self, line: str, col: int) -> ((int, int), int):
         if col >= len(line):
             return (1, 1), col
 
@@ -403,46 +403,53 @@ class GrammarLoader:
             return (1, -1), col+1
 
         if line[col] == QUANTIFIER_SPECIFY_RANGE:
-            col += 1
-
-            if col >= len(line):
-                raise self.__make_exception("Expected quantifier range", col)
-            
-            if line[col] == QUANTIFIER_SPECIFY_LOWER_BOUND:
-                col += 1
-                minimum, col = self.__get_parse_literal_integer(line, col)
-                minimum += 1
-                if minimum < 0:
-                    raise self.__make_exception("Quantifier range cannot be negative", col)
-                return (minimum, -1), col
-            if line[col] == QUANTIFIER_SPECIFY_UPPER_BOUND:
-                col += 1
-                maximum, col = self.__get_parse_literal_integer(line, col)
-                maximum -= 1
-                if maximum < 0:
-                    raise self.__make_exception("Quantifier range cannot be negative", col)
-                return (0, maximum), col
-
-            minimum, col = self.__get_parse_literal_integer(line, col)
-
-            if col < len(line) and line[col] == "-":
-                col += 1
-                maximum, col = self.__get_parse_literal_integer(line, col)
-            else:
-                maximum = minimum
-            
-            if minimum < 0 or maximum < 0:
-                raise self.__make_exception("Quantifier range cannot be negative", col)
-
-            if minimum > maximum:
-                raise self.__make_exception("Invalid quantifier range", col)
-            
-            if minimum == 0 and maximum == 0:
-                raise self.__make_exception("Quantifier range cannot be zero", col)
-            
-            return (minimum, maximum), col
+            return self.__get_parse_matcher_modifier_range(line, col+1)
 
         return (1, 1), col
+    
+    def __get_parse_matcher_modifier_range(self, line: str, col: int) -> ((int, int), int):
+        if col >= len(line):
+            raise self.__make_exception("Expected quantifier range", col)
+
+        if line[col] in [QUANTIFIER_SPECIFY_LOWER_BOUND, QUANTIFIER_SPECIFY_UPPER_BOUND]:
+            return self.__get_parse_matcher_modifier_quantifier_open_range(line, col)
+
+        minimum, col = self.__get_parse_literal_integer(line, col)
+
+        if col < len(line) and line[col] == "-":
+            col += 1
+            maximum, col = self.__get_parse_literal_integer(line, col)
+        else:
+            maximum = minimum
+            
+        if minimum < 0 or maximum < 0:
+            raise self.__make_exception("Quantifier range cannot be negative", col)
+
+        if minimum > maximum:
+            raise self.__make_exception("Invalid quantifier range", col)
+            
+        if minimum == 0 and maximum == 0:
+            raise self.__make_exception("Quantifier range cannot be zero", col)
+            
+        return (minimum, maximum), col
+    
+    def __get_parse_matcher_modifier_quantifier_open_range(self, line: str, col: int) -> ((int, int), int):
+        if line[col] == QUANTIFIER_SPECIFY_LOWER_BOUND:
+            col += 1
+            minimum, col = self.__get_parse_literal_integer(line, col)
+            minimum += 1
+            if minimum < 0:
+                raise self.__make_exception("Quantifier range cannot be negative", col)
+            return (minimum, -1), col
+        if line[col] == QUANTIFIER_SPECIFY_UPPER_BOUND:
+            col += 1
+            maximum, col = self.__get_parse_literal_integer(line, col)
+            maximum -= 1
+            if maximum < 0:
+                raise self.__make_exception("Quantifier range cannot be negative", col)
+            return (0, maximum), col
+        
+        raise self.__make_exception("Expected quantifier open range", col)
     
     def __get_parse_matcher_modifier_look_ahead(self, line: str, col: int) -> (bool, int):
         if col < len(line) and line[col] == "~":
