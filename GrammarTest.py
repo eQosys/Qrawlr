@@ -166,7 +166,7 @@ if __name__ == "__main__":
     try:
         #test_algebra()
         #test_qism()
-        test_grammar(True)
+        test_grammar(False)
         #test_qinp()
         #test_integer_list()
         #test_code_generation()

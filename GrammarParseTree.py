@@ -21,7 +21,7 @@ class ParseTree(ABC):
 
     def _add_optional_verbose_info(self, text: str, verbose: bool) -> str:
         if verbose:
-            text += f":{self.id}\\n{self.line}:{self.column}"
+            text += f"\\n{self.line}:{self.column}"
 
         return text
 
