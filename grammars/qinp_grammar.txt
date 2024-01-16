@@ -7,7 +7,7 @@ GlobalCodeLine:
     GlobalCodeStatement
 
 GlobalCodeStatement(hidden):
-    Import{ onMatch: message("Import statement") }
+    Import
     Pass
     SpaceDefinition
 

@@ -390,7 +390,8 @@ Triggers can be on of the following:
   - `onMatch`: Executes the specified actions when the matcher matches.
   - `onFail`: Executes the specified actions when the matcher fails to match.
 
-**Note**: `onMatch` also triggers when any subsequent matcher fails to match. It does not guarantee that the match will be present in the final parse tree.
+**Note**: `onMatch` also triggers when any subsequent matcher fails to match. It does not guarantee that the match will be present in the final parse tree. \
+Example: Applying `"H"{ onMatch: message("Matched 'H') } "ello"` on `Hell` will print `Matched 'H'` even though the entire rule fails to match.
 
 >Syntax:
 >```qrawlr
