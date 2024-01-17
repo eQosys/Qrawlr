@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 
 from GrammarParseTree import *
 from GrammarException import *
-from GrammarTools import index_to_position, make_position_string
 
 QUANTIFIER_ZERO_OR_ONE = "?"
 QUANTIFIER_ZERO_OR_MORE = "*"
@@ -23,6 +22,91 @@ ACTION_ARG_TYPE_IDENTIFIER = 2
 TRIGGER_ON_MATCH = "onMatch"
 TRIGGER_ON_FAIL = "onFail"
 ACTION_TRIGGERS = [ TRIGGER_ON_MATCH, TRIGGER_ON_FAIL ]
+import bisect
+
+class ParseData:
+    def __init__(self, text: str, filename: str, rules: dict["Rule"]) -> None:
+        self.__text = text
+        self.__filename = filename
+        self.__rules = rules
+        self.__stacks = {}
+        self.__stack_histories = {}
+        self.farthest_match_index = -1
+
+        self.__length = len(text)
+
+        self.__gen_newline_cache()
+
+    def has_rule(self, name: str) -> bool:
+        return name in self.__rules
+
+    def get_rule(self, name: str) -> "Rule":
+        return self.__rules[name]
+
+    def get_stack(self, name: str) -> list[str]:
+        if name not in self.__stacks:
+            self.__stacks[name] = []
+            self.__stack_histories[name] = []
+
+        return self.__stacks[name]
+
+    def get_stack_history(self, name: str) -> list[tuple[str, str]]:
+        if name not in self.__stacks:
+            self.__stacks[name] = []
+            self.__stack_histories[name] = []
+
+        return self.__stack_histories[name]
+
+    def eof(self, index: int) -> bool:
+        return index >= self.__length
+
+    def get_checkpoint(self) -> dict[str, int]:
+        return dict(map(lambda name : (name, len(self.__stack_histories[name])), self.__stack_histories.keys()))
+    
+    def restore_checkpoint(self, checkpoint: dict[str, int]) -> None:
+        for name, index in checkpoint.items():
+            stack = self.__stacks[name]
+            history = self.__stack_histories[name]
+            while len(history) > index:
+                operator, value = history.pop()
+                if operator == "push":
+                    stack.pop()
+                elif operator == "pop":
+                    stack.append(value)
+                else:
+                    raise GrammarException(f"Unknown action operator '{operator}'")
+
+    def get_position(self, index: int) -> tuple[int, int]:
+        line = bisect.bisect_left(self.__newline_cache, index)
+        column = index - self.__newline_cache[line - 1]
+        return (line, column)
+    
+    def get_position_string(self, index: int) -> str:
+        line, column = self.get_position(index)
+        return f"{self.__filename}:{line}:{column}"
+    
+    def stacks_are_empty(self) -> bool:
+        for stack in self.__stacks.values():
+            if len(stack) > 0:
+                return False
+        return True
+
+    def __gen_newline_cache(self) -> None:
+        self.__newline_cache = [ -1 ]
+        for i in range(len(self.__text)):
+            if self.__text[i] == "\n":
+                self.__newline_cache.append(i)
+
+    # STRING ACCESS
+
+    def startswith(self, value: str, start = None, end = None) -> bool:
+        return self.__text.startswith(value, start, end)
+    
+    def endswith(self, value: str, start = None, end = None) -> bool:
+        return self.__text.endswith(value, start, end)
+
+    def __getitem__(self, key) -> str:
+        return self.__text[key]
 
 class MatcherInitializers:
     def __init__(self, inverted: bool = False, count_min: int = 1, count_max: int = 1, look_ahead: bool = False, omit_match: bool = False, match_repl: (int, str) = None, actions: dict[str, list[tuple[str, list[tuple[int, None]]]]] = {}) -> None:
@@ -44,15 +128,15 @@ class Matcher(ABC):
         self.match_repl    = initializers.match_repl
         self.actions       = copy.deepcopy(initializers.actions)
 
-    def match(self, string: str, index: int, ruleset: "RuleSet", filename: str) -> tuple[ParseTree, int]:
+    def match(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
         old_index = index
         match_count = 0
-        checkpoint = ruleset.get_checkpoint()
+        checkpoint = parseData.get_checkpoint()
 
-        tree = ParseTreeNode(*index_to_position(string, index))
+        tree = ParseTreeNode(*parseData.get_position(index))
         while True:
-            sub_tree, sub_index = self._match_specific(string, index, ruleset, filename)
-            sub_tree, index = self._apply_optional_invert(string, index, sub_index, sub_tree)
+            sub_tree, sub_index = self._match_specific(parseData, index)
+            sub_tree, index = self._apply_optional_invert(parseData, index, sub_index, sub_tree)
 
             if sub_tree is None:
                 break
@@ -65,21 +149,21 @@ class Matcher(ABC):
         
         if match_count < self.count_min:
             # TODO: Maybe 'index' should be 'old_index'?
-            self._run_actions_for_trigger(TRIGGER_ON_FAIL, None, ruleset, make_position_string(filename, string, old_index))
-            ruleset.revert_to_checkpoint(checkpoint)
+            self._run_actions_for_trigger(TRIGGER_ON_FAIL, None, parseData, old_index)
+            parseData.restore_checkpoint(checkpoint)
             return None, old_index
 
         # TODO: Maybe 'index' should be 'index + length'?
-        if ruleset.farthest_match_index < index:
-            ruleset.farthest_match_index = index
+        if parseData.farthest_match_index < index:
+            parseData.farthest_match_index = index
 
         if self.look_ahead:
             index = old_index
 
         # TODO: Maybe 'index' should be 'old_index'?
-        self._run_actions_for_trigger(TRIGGER_ON_MATCH, tree, ruleset, make_position_string(filename, string, old_index))
+        self._run_actions_for_trigger(TRIGGER_ON_MATCH, tree, parseData, old_index)
 
-        tree = self._apply_match_replacement(tree, string, index, ruleset)
+        tree = self._apply_match_replacement(tree, parseData, index)
 
         return tree, index
     
@@ -112,32 +196,32 @@ class Matcher(ABC):
             args.append(f"({type_id}, \"{value}\")")
         return f"[{', '.join(args)}]"
 
-    def _apply_optional_invert(self, string: str, index_old: int, index_new: int, tree: ParseTree) -> tuple[ParseTree, int]:
+    def _apply_optional_invert(self, parseData: ParseData, index_old: int, index_new: int, tree: ParseTree) -> tuple[ParseTree, int]:
         if not self.inverted:
             return tree, index_new
         
-        if tree is None and index_old < len(string):
-            return ParseTreeExactMatch(string[index_old], *index_to_position(string, index_old)), index_old+1
+        if tree is None and not parseData.eof(index_old):
+            return ParseTreeExactMatch(parseData[index_old], *parseData.get_position(index_old)), index_old+1
         
         return None, index_old
 
-    def _run_actions_for_trigger(self, trigger_name: str, tree: ParseTreeNode, ruleset: "RuleSet", position_str: str) -> None:
+    def _run_actions_for_trigger(self, trigger_name: str, tree: ParseTreeNode, parseData: ParseData, index: int) -> None:
         trigger = self.actions.get(trigger_name, [])
         for (action_name, args) in trigger:
             args = list(map(lambda arg : arg if arg[0] != ACTION_ARG_TYPE_MATCH else (ACTION_ARG_TYPE_STRING, str(tree)), args))
             
             if action_name == "push":
-                self._run_action_push(tree, args, ruleset, position_str)
+                self._run_action_push(tree, args, parseData, index)
             elif action_name == "pop":
-                self._run_action_pop(tree, args, ruleset, position_str)
+                self._run_action_pop(tree, args, parseData, index)
             elif action_name == "message":
-                self._run_action_message(tree, args, ruleset, position_str)
+                self._run_action_message(tree, args, parseData, index)
             elif action_name == "fail":
-                self._run_action_fail(tree, args, ruleset, position_str)
+                self._run_action_fail(tree, args, parseData, index)
             else:
                 raise GrammarException(f"Unknown action '{action_name}'")
 
-    def _run_action_push(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet", position_str: str) -> None:
+    def _run_action_push(self, tree: ParseTreeNode, args: list[tuple[int, None]], parseData: ParseData, index: int) -> None:
         if len(args) != 2:
             raise GrammarException("Wrong number of arguments for action 'push'")
         
@@ -156,13 +240,13 @@ class Matcher(ABC):
         else:
             raise GrammarException("Unknown action argument type for 'item'")
         
-        stack = ruleset.stacks[stack_name]
-        history = ruleset.stack_histories[stack_name]
+        stack = parseData.get_stack(stack_name)
+        history = parseData.get_stack_history(stack_name)
 
         stack.append(value)
         history.append(("push", value))
 
-    def _run_action_pop(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet", position_str: str) -> None:
+    def _run_action_pop(self, tree: ParseTreeNode, args: list[tuple[int, None]], parseData: ParseData, index: int) -> None:
         if len(args) != 1:
             raise GrammarException("Wrong number of arguments for action 'pop'")
         
@@ -173,8 +257,8 @@ class Matcher(ABC):
         
         stack_name = arg_stack[1]
 
-        stack = ruleset.stacks[stack_name]
-        history = ruleset.stack_histories[stack_name]
+        stack = parseData.get_stack(stack_name)
+        history = parseData.get_stack_history(stack_name)
 
         if len(stack) == 0:
             raise GrammarException(f"Cannot pop from empty stack '{stack_name}'")
@@ -182,7 +266,7 @@ class Matcher(ABC):
         value = stack.pop()
         history.append(("pop", value))
 
-    def _run_action_message(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet", position_str: str) -> None:
+    def _run_action_message(self, tree: ParseTreeNode, args: list[tuple[int, None]], parseData: ParseData, index: int) -> None:
         if len(args) != 1:
             raise GrammarException("Wrong number of arguments for action 'message'")
         
@@ -193,9 +277,9 @@ class Matcher(ABC):
         
         message = arg_message[1]
 
-        print(f"MSG: {position_str}: {message}")
+        print(f"MSG: {parseData.get_position_string(index)}: {message}")
 
-    def _run_action_fail(self, tree: ParseTreeNode, args: list[tuple[int, None]], ruleset: "RuleSet", position_str: str) -> None:
+    def _run_action_fail(self, tree: ParseTreeNode, args: list[tuple[int, None]], parseData: ParseData, index: int) -> None:
         if len(args) != 1:
             raise GrammarException("Wrong number of arguments for action 'fail'")
         
@@ -206,29 +290,27 @@ class Matcher(ABC):
         
         message = arg_message[1]
 
-        raise GrammarException(f"FAIL: {position_str}: {message}")
+        raise GrammarException(f"FAIL: {parseData.get_position_string(index)}: {message}")
 
-    def _apply_match_replacement(self, tree: ParseTree, string: str, index: int, ruleset: "RuleSet") -> ParseTree:
+    def _apply_match_replacement(self, tree: ParseTree, parseData: ParseData, index: int) -> ParseTree:
         if self.match_repl is not None:
             repl_type, repl = self.match_repl
 
             if repl_type == MATCH_REPL_STRING:
-                tree = ParseTreeExactMatch(repl, *index_to_position(string, index))
+                tree = ParseTreeExactMatch(repl, *parseData.get_position(index))
 
             elif repl_type == MATCH_REPL_STACK:
                 stack_name, stack_index = repl.split(".")
                 stack_index = int(stack_index)
-
-                if stack_name not in ruleset.stacks:
-                    raise GrammarException(f"Stack '{stack_name}' not found")
                 
-                stack = ruleset.stacks[stack_name]
+                stack = parseData.get_stack(stack_name)
+                
                 if stack_index < len(stack):
                     value = stack[-stack_index-1]
                 else:
                     value = ""
 
-                tree = ParseTreeExactMatch(value, *index_to_position(string, index))
+                tree = ParseTreeExactMatch(value, *parseData.get_position(index))
 
             elif repl_type == MATCH_REPL_IDENTIFIER:
                 tree.name = repl
@@ -333,7 +415,7 @@ class Matcher(ABC):
         return self._to_string() + self._modifiers_to_str() + self._actions_to_str()
 
     @abstractmethod
-    def _match_specific(self, string: str, index: int, ruleset: "RuleSet", filename: str) -> tuple[ParseTree, int]:
+    def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
         raise NotImplementedError("Matcher._match() must be implemented by subclasses")
    
     @abstractmethod
@@ -343,42 +425,6 @@ class Matcher(ABC):
     @abstractmethod
     def _generate_python_code(self) -> str:
         raise NotImplementedError("Matcher._generate_python_code() must be implemented by subclasses")
-
-class RuleSet:
-    def __init__(self, rules: dict[str, "Rule"] = {}, stack_names: set[str] = {}) -> None:
-        self.rules = dict(rules)
-        self.stacks = dict(map(lambda name : (name, []), stack_names))
-        self.stack_histories = dict(map(lambda name : (name, []), stack_names))
-        self.farthest_match_index = 0
-
-    def get_checkpoint(self) -> dict[str, int]:
-        return dict(map(lambda name : (name, len(self.stack_histories[name])), self.stack_histories.keys()))
-    
-    def revert_to_checkpoint(self, checkpoint: dict[str, int]) -> None:
-        for name, index in checkpoint.items():
-            stack = self.stacks[name]
-            history = self.stack_histories[name]
-            while len(history) > index:
-                operator, value = history.pop()
-                if operator == "push":
-                    stack.pop()
-                elif operator == "pop":
-                    stack.append(value)
-                else:
-                    raise GrammarException(f"Unknown action operator '{operator}'")
-
-    def reset(self) -> None:
-        for stack in self.stacks.values():
-            stack.clear()
-        for history in self.stack_histories.values():
-            history.clear()
-        self.farthest_match_index = 0
-
-    def stacks_are_empty(self) -> bool:
-        for stack in self.stacks.values():
-            if len(stack) > 0:
-                return False
-        return True
 
 class MatcherList(Matcher):
     def __init__(self, options: list[Matcher] = [], *args, **kwargs) -> None:
@@ -396,11 +442,11 @@ class MatcherMatchAnyChar(Matcher):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def _match_specific(self, string: str, index: int, ruleset: RuleSet, filename: str) -> tuple[ParseTree, int]:
-        if index >= len(string):
+    def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
+        if parseData.eof(index):
             return None, index
 
-        return ParseTreeExactMatch(string[index], *index_to_position(string, index)), index+1
+        return ParseTreeExactMatch(parseData[index], *parseData.get_position(index)), index+1
 
     def _to_string(self) -> str:
         return "."
@@ -413,16 +459,16 @@ class MatcherMatchAll(MatcherList):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def _match_specific(self, string: str, index: int, ruleset: RuleSet, filename: str) -> tuple[ParseTree, int]:
+    def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
         old_index = index
         children = []
         for option in self.options:
-            child, index = option.match(string, index, ruleset, filename)
+            child, index = option.match(parseData, index)
             if child is None:
                 return None, old_index
             children.append(child)
 
-        node = ParseTreeNode(*index_to_position(string, index))
+        node = ParseTreeNode(*parseData.get_position(index))
         for child in children:
             node.add_child(child)
 
@@ -443,9 +489,9 @@ class MatcherMatchAny(MatcherList):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def _match_specific(self, string: str, index: int, ruleset: RuleSet, filename: str) -> tuple[ParseTree, int]:
+    def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
         for option in self.options:
-            node, index = option.match(string, index, ruleset, filename)
+            node, index = option.match(parseData, index)
             if node is not None:
                 return node, index
         return None, index
@@ -467,11 +513,14 @@ class MatcherMatchRange(Matcher):
         self.first = first
         self.last = last
     
-    def _match_specific(self, string: str, index: int, ruleset: RuleSet, filename: str) -> tuple[ParseTree, int]:
-        if index >= len(string) or string[index] < self.first or string[index] > self.last:
+    def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
+        if parseData.eof(index):
+            return None, index
+        
+        if parseData[index] < self.first or parseData[index] > self.last:
             return None, index
 
-        return ParseTreeExactMatch(string[index], *index_to_position(string, index)), index+1
+        return ParseTreeExactMatch(parseData[index], *parseData.get_position(index)), index+1
     
     def _to_string(self) -> str:
         return f"'{self.first}{self.last}'"
@@ -484,12 +533,12 @@ class MatcherMatchExact(Matcher):
     def __init__(self, value: str, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.value = value
-
-    def _match_specific(self, string: str, index: int, ruleset: RuleSet, filename: str) -> tuple[ParseTree, int]:
-        if not string.startswith(self.value, index):
+        
+    def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
+        if not parseData.startswith(self.value, index):
             return None, index
 
-        return ParseTreeExactMatch(self.value, *index_to_position(string, index)), index+len(self.value)
+        return ParseTreeExactMatch(self.value, *parseData.get_position(index)), index+len(self.value)
     
     def _to_string(self) -> str:
         return f"\"{escape_string(self.value)}\""
@@ -502,11 +551,11 @@ class MatcherMatchRule(Matcher):
         super().__init__(*args, **kwargs)
         self.rulename = rulename
 
-    def _match_specific(self, string: str, index: int, ruleset: RuleSet, filename: str) -> tuple[ParseTree, int]:
-        if self.rulename not in ruleset.rules:
+    def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
+        if not parseData.has_rule(self.rulename):
             raise GrammarException(f"Rule '{self.rulename}' not found")
-        rule = ruleset.rules[self.rulename]
-        tree, index = rule.match(string, index, ruleset, filename)
+        rule = parseData.get_rule(self.rulename)
+        tree, index = rule.match(parseData, index)
         if isinstance(tree, ParseTreeNode) and not rule.anonymous:
             tree.name = self.rulename
         return tree, index
@@ -523,18 +572,16 @@ class MatcherMatchStack(Matcher):
         self.name = name
         self.index = index
 
-    def _match_specific(self, string: str, index: int, ruleset: RuleSet, filename: str) -> tuple[ParseTree, int]:
-        if not self.name in ruleset.stacks:
-            raise GrammarException(f"Stack '{self.name}' not found")
-        
-        stack = ruleset.stacks[self.name]
-        if self.index >= len(stack):
-            to_match = ""
-        else:
-            to_match = ruleset.stacks[self.name][-self.index-1]
+    def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
+        stack = parseData.get_stack(self.name)
 
-        if string.startswith(to_match, index):
-            return ParseTreeExactMatch(to_match, *index_to_position(string, index)), index+len(to_match)
+        if self.index < len(stack):
+            to_match = stack[-self.index-1]
+        else:
+            to_match = ""
+
+        if parseData.startswith(to_match, index):
+            return ParseTreeExactMatch(to_match, *parseData.get_position(index)), index+len(to_match)
 
         return None, index
     
@@ -551,8 +598,8 @@ class Rule(MatcherMatchAny):
         self.anonymous = anonymous
         self.fuse_children = fuse_children
 
-    def match(self, string: str, index: int, ruleset: RuleSet, filename: str) -> tuple[ParseTree, int]:
-        tree, index = super().match(string, index, ruleset, filename)
+    def match(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
+        tree, index = super().match(parseData, index)
         if self.fuse_children:
             self.__fuse_children(tree)
         return tree, index

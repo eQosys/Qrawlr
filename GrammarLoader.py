@@ -5,8 +5,6 @@ NAME_TYPE_RULE = "Rule name"
 NAME_TYPE_OPTIONAL = "Optional name"
 NAME_TYPE_STACK = "Stack name"
 
-OCT_DIGITS = "01234567"
-DEC_DIGITS = "0123456789"
 HEX_DIGITS = "0123456789abcdefABCDEF"
 
 class GrammarLoader:
@@ -44,8 +42,6 @@ class GrammarLoader:
             except IndexError:
                 break
 
-        self.ruleset = RuleSet(self.rules)
-
     def __check_if_rule_name_exists(self, name: str, col: int) -> None:
         if name in self.rules.keys():
             raise self.__make_exception(f"'{name}' already exists", col)
@@ -53,7 +49,7 @@ class GrammarLoader:
     def __check_for_unknown_references(self) -> None:
         err_msgs = []
         for name, references in self.__referenced_rules.items():
-            if name not in self.ruleset.rules:
+            if name not in self.rules:
                 for line, col in references:
                     err_msgs.append(self.__make_exception(f"Undefined rule '{name}'", col, line))
         

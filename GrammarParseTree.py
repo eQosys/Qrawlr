@@ -1,7 +1,6 @@
 import graphviz
 import itertools
 from abc import ABC, abstractmethod
-
 from GrammarTools import escape_string
 
 class ParseTree(ABC):

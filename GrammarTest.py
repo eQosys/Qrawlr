@@ -1,7 +1,6 @@
 import os
 import json
 from Grammar import Grammar, GrammarException
-from GrammarTools import index_to_position
 from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 
 def load_dynamic_grammar():
@@ -85,9 +84,6 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None,
     if tree is None or tree.length < len(text):
         print("  ERROR: Text was not fully parsed")
         print(f"    Max index: {g.ruleset.farthest_match_index}", end="" if filename else "\n")
-        if filename:
-            line, col = index_to_position(text, g.ruleset.farthest_match_index)
-            print(f" -> {filename}:{line}:{col}")
         print(f"    Remaining text: {repr(text[g.ruleset.farthest_match_index:][:32])}")
 
         if tree is None:
@@ -103,9 +99,11 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None,
     return tree
 
 def test_algebra():
-    expression = "-533+(256-79+105)-703+79-603+(87*(475))/(744)+274-((524/162*42-504*638))/(163*814-(((885)+451)-573+408-(649+267+((582-464))+688+590+524)*594+706))-881-728-133"
+    filename = "test_files/algebra_expression.txt"
+    with open(filename, "r") as f:
+        expression = f.read().strip()
 
-    tree = run_test("grammars/algebra_grammar.txt", "Expression", expression, verbose = False)
+    tree = run_test("grammars/algebra_grammar.txt", "Expression", expression, filename, verbose = False)
 
     result = evaluate_expression(tree)
 
@@ -140,11 +138,6 @@ def test_qinp():
 
     run_test("grammars/qinp_grammar.txt", "GlobalCode", text, filename, verbose = True)
 
-def test_integer_list():
-    text = "0 1 2 3 12 0x12 054 00"
-
-    run_test("grammars/integer_list_grammar.txt", "IntegerList", text, verbose = True)
-
 def test_code_generation():
     g = Grammar("grammars/qinp_grammar.txt")
     pre_str = str(g)
@@ -165,11 +158,10 @@ def test_code_generation():
 
 if __name__ == "__main__":
     try:
-        #test_algebra()
-        #test_qism()
-        #test_grammar(False)
-        #test_qinp()
-        #test_integer_list()
+        test_algebra()
+        test_qism()
+        test_grammar(False)
+        test_qinp()
         test_code_generation()
     except GrammarException as e:
         print(f"  ERROR: {e}")
