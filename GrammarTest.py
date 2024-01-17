@@ -103,7 +103,7 @@ def test_algebra():
     with open(filename, "r") as f:
         expression = f.read().strip()
 
-    tree = run_test("grammars/algebra_grammar.txt", "Expression", expression, filename, verbose = False)
+    tree = run_test("grammars/algebra_grammar.qgr", "Expression", expression, filename, verbose = False)
 
     result = evaluate_expression(tree)
 
@@ -111,10 +111,10 @@ def test_algebra():
     print(f"        reference = {eval(expression.replace('/', '//'))}")
 
 def test_grammar(self_only):
-    grammar_path = "grammars/grammar_grammar.txt"
+    grammar_path = "grammars/grammar_grammar.qgr"
 
     for filename in os.listdir("grammars"):
-        if filename.endswith(".txt"):
+        if filename.endswith(".qgr"):
             path = os.path.join("grammars", filename)
             if self_only and path != grammar_path:
                 continue
@@ -129,17 +129,17 @@ def test_qism():
     with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/qism_grammar.txt", "Code", text, filename)
+    run_test("grammars/qism_grammar.qgr", "Code", text, filename)
 
 def test_qinp():
     filename = "test_files/push_pop_test.qnp"
     with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/qinp_grammar.txt", "GlobalCode", text, filename, verbose = True)
+    run_test("grammars/qinp_grammar.qgr", "GlobalCode", text, filename, verbose = True)
 
 def test_code_generation():
-    g = Grammar("grammars/qinp_grammar.txt")
+    g = Grammar("grammars/qinp_grammar.qgr")
     pre_str = str(g)
 
     exec(g.generate_python_code("load_dynamic_grammar"), globals())
