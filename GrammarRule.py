@@ -1,4 +1,5 @@
 import copy
+import bisect
 from abc import ABC, abstractmethod
 
 from GrammarParseTree import *
@@ -22,7 +23,6 @@ ACTION_ARG_TYPE_IDENTIFIER = 2
 TRIGGER_ON_MATCH = "onMatch"
 TRIGGER_ON_FAIL = "onFail"
 ACTION_TRIGGERS = [ TRIGGER_ON_MATCH, TRIGGER_ON_FAIL ]
-import bisect
 
 class ParseData:
     def __init__(self, text: str, filename: str, rules: dict["Rule"]) -> None:
@@ -76,14 +76,14 @@ class ParseData:
                 else:
                     raise GrammarException(f"Unknown action operator '{operator}'")
 
-    def get_position(self, index: int) -> tuple[int, int]:
+    def get_position(self, index: int) -> Position:
         line = bisect.bisect_left(self.__newline_cache, index)
         column = index - self.__newline_cache[line - 1]
-        return (line, column)
+        return Position(index, line, column)
     
     def get_position_string(self, index: int) -> str:
-        line, column = self.get_position(index)
-        return f"{self.__filename}:{line}:{column}"
+        pos = self.get_position(index)
+        return f"{self.__filename}:{pos.line}:{pos.column}"
     
     def stacks_are_empty(self) -> bool:
         for stack in self.__stacks.values():
@@ -200,8 +200,10 @@ class Matcher(ABC):
         if not self.inverted:
             return tree, index_new
         
+        next_index = index_old + 1
+        
         if tree is None and not parseData.eof(index_old):
-            return ParseTreeExactMatch(parseData[index_old], parseData.get_position(index_old)), index_old+1
+            return ParseTreeExactMatch(parseData[index_old], parseData.get_position(index_old), parseData.get_position(next_index)), next_index
         
         return None, index_old
 
@@ -446,7 +448,9 @@ class MatcherMatchAnyChar(Matcher):
         if parseData.eof(index):
             return None, index
 
-        return ParseTreeExactMatch(parseData[index], parseData.get_position(index)), index+1
+        next_index = index + 1
+
+        return ParseTreeExactMatch(parseData[index], parseData.get_position(index), parseData.get_position(next_index)), next_index
 
     def _to_string(self) -> str:
         return "."
@@ -520,7 +524,9 @@ class MatcherMatchRange(Matcher):
         if parseData[index] < self.first or parseData[index] > self.last:
             return None, index
 
-        return ParseTreeExactMatch(parseData[index], parseData.get_position(index)), index+1
+        next_index = index + 1
+
+        return ParseTreeExactMatch(parseData[index], parseData.get_position(index), parseData.get_position(next_index)), next_index
     
     def _to_string(self) -> str:
         return f"'{self.first}{self.last}'"
@@ -538,7 +544,9 @@ class MatcherMatchExact(Matcher):
         if not parseData.startswith(self.value, index):
             return None, index
 
-        return ParseTreeExactMatch(self.value, parseData.get_position(index)), index+len(self.value)
+        next_index = index + len(self.value)
+
+        return ParseTreeExactMatch(self.value, parseData.get_position(index), parseData.get_position(next_index)), next_index
     
     def _to_string(self) -> str:
         return f"\"{escape_string(self.value)}\""
@@ -626,6 +634,8 @@ class Rule(MatcherMatchAny):
                     leafID = i
                 else:
                     tree.children[leafID].value += tree.children[i].value
+                    if tree.children[leafID].position_end.index < tree.children[i].position_end.index:
+                        tree.children[leafID].position_end = tree.children[i].position_end
                     tree.children.pop(i)
                     i -= 1
             else:

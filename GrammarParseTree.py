@@ -1,15 +1,21 @@
 import graphviz
 import itertools
 from abc import ABC, abstractmethod
-from GrammarTools import escape_string
+from GrammarTools import Position, escape_string
 
 class ParseTree(ABC):
     __id_iter = itertools.count()
 
-    def __init__(self, position: tuple[int, int], length: int = 0) -> None:
+    def __init__(self, position_begin: Position, position_end: Position = None) -> None:
+        # TODO: Remove these checks
+        if not isinstance(position_begin, Position):
+            raise ValueError
+        if not isinstance(position_end, Position) and position_end is not None:
+            raise ValueError
+        
         self.id = next(ParseTree.__id_iter)
-        self.position = position
-        self.length = length
+        self.position_begin = position_begin
+        self.position_end = position_begin if position_end is None else position_end
 
     def to_digraph(self, verbose: bool = True) -> graphviz.Digraph:
         dot = graphviz.Digraph()
@@ -19,7 +25,8 @@ class ParseTree(ABC):
 
     def _add_optional_verbose_info(self, text: str, verbose: bool) -> str:
         if verbose:
-            text += f"\\n{self.position[0]}:{self.position[1]}"
+            text += f"\\n{self.position_begin.line}:{self.position_begin.column}"
+            text += f" -> {self.position_end.line}:{self.position_end.column}"
 
         return text
 
@@ -28,8 +35,8 @@ class ParseTree(ABC):
         raise NotImplementedError("ParseTree.__to_digraph() must be implemented by subclasses")
 
 class ParseTreeNode(ParseTree):
-    def __init__(self, position: tuple[int, int]) -> None:
-        super().__init__(position)
+    def __init__(self, position_begin: Position) -> None:
+        super().__init__(position_begin)
         self.name: str = None
         self.children: list[ParseTree] = []
 
@@ -39,7 +46,9 @@ class ParseTreeNode(ParseTree):
                 self.children.extend(child.children)
             else:
                 self.children.append(child)
-        self.length += child.length
+
+        if self.position_end.index < child.position_end.index:
+            self.position_end = child.position_end
 
     def _to_digraph(self, dot: graphviz.Digraph, verbose) -> str:
         text = f"{self.name}"
@@ -54,8 +63,8 @@ class ParseTreeNode(ParseTree):
         return "".join([str(c) for c in self.children])
 
 class ParseTreeExactMatch(ParseTree):
-    def __init__(self, value: str, position: tuple[int, int], length_override: int = None) -> None:
-        super().__init__(position, len(value) if length_override is None else length_override)
+    def __init__(self, value: str, position_begin: Position, position_end: Position) -> None:
+        super().__init__(position_begin, position_end)
         self.value = value
 
     def _to_digraph(self, dot: graphviz.Digraph, verbose) -> str:

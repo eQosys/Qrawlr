@@ -81,7 +81,7 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None,
 
     tree = g.apply_to(text, entry_rule, filename)
     
-    if tree is None or tree.length < len(text):
+    if tree is None or tree.position_end.index < len(text):
         print("  ERROR: Text was not fully parsed")
         print(f"    Max index: {g.ruleset.farthest_match_index}", end="" if filename else "\n")
         print(f"    Remaining text: {repr(text[g.ruleset.farthest_match_index:][:32])}")
