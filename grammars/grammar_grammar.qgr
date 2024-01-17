@@ -1,166 +1,166 @@
 \\ ---------------- GRAMMAR ----------------
 
 Grammar:
-	GrammarLine ( Newline_ GrammarLine )*
+    GrammarLine ( Newline_ GrammarLine )*
 
 GrammarLine(hidden):
-	RuleDefinition Whitespace?_ Comment?
-	Comment
-	Whitespace?_ Newline~_
+    RuleDefinition Whitespace?_ Comment?
+    Comment
+    Whitespace?_ Newline~_
 
 \\ ---------------- RULE DEFINITION ----------------
 
 RuleDefinition:
-	RuleHeader [ (Newline Whitespace) Whitespace? ]_ RuleBody
+    RuleHeader [ (Newline Whitespace) Whitespace? ]_ RuleBody
 
 RuleHeader:
-	Identifier RuleModifierList?_ ":"_
+    Identifier RuleModifierList?_ ":"_
 
 RuleBody:
-	RuleOptionDefinition (Newline_ Whitespace_ RuleOptionDefinition)*
+    RuleOptionDefinition (Newline_ Whitespace_ RuleOptionDefinition)*
 
 \\ ---------------- RULE MODIFIERS ----------------
 
 RuleModifierList(hidden):
-	"("_ RuleModifier (Whitespace_ RuleModifier)* ")"_
+    "("_ RuleModifier (Whitespace_ RuleModifier)* ")"_
 
 RuleModifier:
-	"hidden"
-	"fuse"
+    "hidden"
+    "fuse"
 
 \\ ---------------- RULE OPTION ----------------
 
 RuleOptionDefinition:
-	FullMatcher (Whitespace?_ FullMatcher)*
+    FullMatcher (Whitespace?_ FullMatcher)*
 
 \\ ---------------- MATCHERS ----------------
 
 FullMatcher:
-	Matcher MatcherModifiers MatcherActions?
+    Matcher MatcherModifiers MatcherActions?
 
 Matcher(hidden):
-	MatchAnyChar
-	MatchAll
-	MatchAny
-	MatchRange
-	MatchExact
-	MatchRule
-	MatchStack
+    MatchAnyChar
+    MatchAll
+    MatchAny
+    MatchRange
+    MatchExact
+    MatchRule
+    MatchStack
 
 MatchAnyChar:
-	"."_
+    "."_
 
 MatchAll(fuse):
-	"("_ Whitespace?_ FullMatcher (Whitespace?_ FullMatcher)* Whitespace?_ ")"_
+    "("_ Whitespace?_ FullMatcher (Whitespace?_ FullMatcher)* Whitespace?_ ")"_
 
 MatchAny:
-	"["_ Whitespace?_ FullMatcher (Whitespace?_ FullMatcher)* Whitespace?_ "]"_
+    "["_ Whitespace?_ FullMatcher (Whitespace?_ FullMatcher)* Whitespace?_ "]"_
 
 MatchRange:
-	"'"_ MatchRangeChar#2 "'"_
+    "'"_ MatchRangeChar#2 "'"_
 
 MatchExact(fuse):
-	String
+    String
 
 MatchRule:
-	Identifier
+    Identifier
 
 MatchStack:
-	":"_ Identifier "."_ Integer ":"_
+    ":"_ Identifier "."_ Integer ":"_
 
 \\ ---------------- MATCHER MODIFIERS ----------------
 
 MatcherModifiers(hidden):
-	MatcherModifierInvert? MatcherModifierQuantifier? MatcherModifierLookAhead? MatcherModifierOmitMatch? MatcherModifierReplaceMatch?
+    MatcherModifierInvert? MatcherModifierQuantifier? MatcherModifierLookAhead? MatcherModifierOmitMatch? MatcherModifierReplaceMatch?
 
 MatcherModifierInvert:
-	"!"_
+    "!"_
 
 MatcherModifierQuantifier:
-	[ "?" "*" "+" ]->QuantifierSymbolic
-	( "#"_ Integer "-"_ Integer )->QuantifierRange
-	( "#"_ Integer )->QuantifierExact
-	( "#"_ ">"_ Integer )->QuantifierLowerBound
-	( "#"_ "<"_ Integer )->QuantifierUpperBound
+    [ "?" "*" "+" ]->QuantifierSymbolic
+    ( "#"_ Integer "-"_ Integer )->QuantifierRange
+    ( "#"_ Integer )->QuantifierExact
+    ( "#"_ ">"_ Integer )->QuantifierLowerBound
+    ( "#"_ "<"_ Integer )->QuantifierUpperBound
 
 MatcherModifierLookAhead:
-	"~"_
+    "~"_
 
 MatcherModifierOmitMatch:
-	"_"_
+    "_"_
 
 MatcherModifierReplaceMatch:
-	"->"_ [ Identifier String MatchStack ]
+    "->"_ [ Identifier String MatchStack ]
 
 \\ ---------------- MATCHER ACTIONS ----------------
 
 MatcherActions(hidden):
-	"{"_ Whitespace?_ ( MatcherTrigger ( Whitespace?_ ","_ Whitespace?_ MatcherTrigger )* Whitespace?_ )? "}"_
+    "{"_ Whitespace?_ ( MatcherTrigger ( Whitespace?_ ","_ Whitespace?_ MatcherTrigger )* Whitespace?_ )? "}"_
 
 MatcherTrigger:
-	Identifier Whitespace?_ ":"_ Whitespace?_ MatcherActionList
+    Identifier Whitespace?_ ":"_ Whitespace?_ MatcherActionList
 
 MatcherActionList:
-	"["_ Whitespace?_ ( MatcherAction ( Whitespace?_ ","_ Whitespace?_ MatcherAction )* Whitespace?_ ) "]"_
-	MatcherAction
+    "["_ Whitespace?_ ( MatcherAction ( Whitespace?_ ","_ Whitespace?_ MatcherAction )* Whitespace?_ ) "]"_
+    MatcherAction
 
 MatcherAction:
-	Identifier Whitespace?_ MatcherActionArgumentList
+    Identifier Whitespace?_ MatcherActionArgumentList
 
 MatcherActionArgumentList:
-	"("_ Whitespace?_ ( MatcherActionArgument ( Whitespace?_ ","_ Whitespace?_ MatcherActionArgument )* Whitespace?_ ) ")"_
+    "("_ Whitespace?_ ( MatcherActionArgument ( Whitespace?_ ","_ Whitespace?_ MatcherActionArgument )* Whitespace?_ ) ")"_
 
 MatcherActionArgument:
-	Identifier
-	String
-	"_"_->MatchedText
+    Identifier
+    String
+    "_"_->MatchedText
 
 \\ ---------------- IDENTIFIER ----------------
 
 Identifier(fuse):
-	AlphaChar AlnumChar*
+    AlphaChar AlnumChar*
 
 \\ ---------------- COMMENT ----------------
 
 Comment(fuse):
-	"\\\\" Newline!*
+    "\\\\" Newline!*
 
 \\ ---------------- MISCELLANEOUS ----------------
 
 MatchRangeChar:
-	"\\"? .
+    "\\"? .
 
 String(fuse):
-	"\""_ StringChar* "\""_
+    "\""_ StringChar* "\""_
 
 Integer(fuse):
-	"0x"_ HexChar+ ""_->FormatHex
-	"0b"_ BinChar+ ""_->FormatBin
-	"0"_ OctChar+ ""_->FormatOct
-	DecChar+ ""_->FormatDec
+    "0x"_ HexChar+ ""_->FormatHex
+    "0b"_ BinChar+ ""_->FormatBin
+    "0"_ OctChar+ ""_->FormatOct
+    DecChar+ ""_->FormatDec
 
 StringChar(hidden):
-	EscapeSequence
-	"\""!
+    EscapeSequence
+    "\""!
 
 EscapeSequence(fuse):
-	"\\"_ [ "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\"" ]
-	"\\"_ "x" HexChar HexChar
+    "\\"_ [ "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\"" ]
+    "\\"_ "x" HexChar HexChar
 
 AlphaChar(hidden):
     'az'
     'AZ'
 
 HexChar(hidden):
-	'09'
-	'af'
-	'AF'
+    '09'
+    'af'
+    'AF'
 
 BinChar(hidden):
-	'01'
+    '01'
 
 OctChar(hidden):
-	'07'
+    '07'
 
 DecChar(hidden):
     '09'
