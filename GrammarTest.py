@@ -4,7 +4,7 @@ from Grammar import Grammar, GrammarException
 from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 
 def load_dynamic_grammar():
-    raise GrammarException("this_is_a_test_code_name should have been replaced by code generation")
+    raise GrammarException("load_dynamic_grammar should have been replaced by code generation")
 
 def make_output_dir():
     os.makedirs("output", exist_ok = True)
@@ -158,10 +158,10 @@ def test_code_generation():
 
 if __name__ == "__main__":
     try:
-        test_algebra()
-        test_qism()
-        test_grammar(False)
-        test_qinp()
-        test_code_generation()
+        #test_algebra()
+        #test_qism()
+        test_grammar(True)
+        #test_qinp()
+        #test_code_generation()
     except GrammarException as e:
         print(f"  ERROR: {e}")
