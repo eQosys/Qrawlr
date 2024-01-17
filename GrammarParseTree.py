@@ -6,10 +6,9 @@ from GrammarTools import escape_string
 class ParseTree(ABC):
     __id_iter = itertools.count()
 
-    def __init__(self, line: int, column: int, length: int = 0) -> None:
+    def __init__(self, position: tuple[int, int], length: int = 0) -> None:
         self.id = next(ParseTree.__id_iter)
-        self.line = line
-        self.column = column
+        self.position = position
         self.length = length
 
     def to_digraph(self, verbose: bool = True) -> graphviz.Digraph:
@@ -20,7 +19,7 @@ class ParseTree(ABC):
 
     def _add_optional_verbose_info(self, text: str, verbose: bool) -> str:
         if verbose:
-            text += f"\\n{self.line}:{self.column}"
+            text += f"\\n{self.position[0]}:{self.position[1]}"
 
         return text
 
@@ -29,8 +28,8 @@ class ParseTree(ABC):
         raise NotImplementedError("ParseTree.__to_digraph() must be implemented by subclasses")
 
 class ParseTreeNode(ParseTree):
-    def __init__(self, line: int, column: int) -> None:
-        super().__init__(line, column)
+    def __init__(self, position: tuple[int, int]) -> None:
+        super().__init__(position)
         self.name: str = None
         self.children: list[ParseTree] = []
 
@@ -55,8 +54,8 @@ class ParseTreeNode(ParseTree):
         return "".join([str(c) for c in self.children])
 
 class ParseTreeExactMatch(ParseTree):
-    def __init__(self, value: str, line: int, column: int, length_override: int = None) -> None:
-        super().__init__(line, column, len(value) if length_override is None else length_override)
+    def __init__(self, value: str, position: tuple[int, int], length_override: int = None) -> None:
+        super().__init__(position, len(value) if length_override is None else length_override)
         self.value = value
 
     def _to_digraph(self, dot: graphviz.Digraph, verbose) -> str:

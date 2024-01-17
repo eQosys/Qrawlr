@@ -133,7 +133,7 @@ class Matcher(ABC):
         match_count = 0
         checkpoint = parseData.get_checkpoint()
 
-        tree = ParseTreeNode(*parseData.get_position(index))
+        tree = ParseTreeNode(parseData.get_position(index))
         while True:
             sub_tree, sub_index = self._match_specific(parseData, index)
             sub_tree, index = self._apply_optional_invert(parseData, index, sub_index, sub_tree)
@@ -201,7 +201,7 @@ class Matcher(ABC):
             return tree, index_new
         
         if tree is None and not parseData.eof(index_old):
-            return ParseTreeExactMatch(parseData[index_old], *parseData.get_position(index_old)), index_old+1
+            return ParseTreeExactMatch(parseData[index_old], parseData.get_position(index_old)), index_old+1
         
         return None, index_old
 
@@ -297,7 +297,7 @@ class Matcher(ABC):
             repl_type, repl = self.match_repl
 
             if repl_type == MATCH_REPL_STRING:
-                tree = ParseTreeExactMatch(repl, *parseData.get_position(index))
+                tree = ParseTreeExactMatch(repl, parseData.get_position(index))
 
             elif repl_type == MATCH_REPL_STACK:
                 stack_name, stack_index = repl.split(".")
@@ -310,7 +310,7 @@ class Matcher(ABC):
                 else:
                     value = ""
 
-                tree = ParseTreeExactMatch(value, *parseData.get_position(index))
+                tree = ParseTreeExactMatch(value, parseData.get_position(index))
 
             elif repl_type == MATCH_REPL_IDENTIFIER:
                 tree.name = repl
@@ -446,7 +446,7 @@ class MatcherMatchAnyChar(Matcher):
         if parseData.eof(index):
             return None, index
 
-        return ParseTreeExactMatch(parseData[index], *parseData.get_position(index)), index+1
+        return ParseTreeExactMatch(parseData[index], parseData.get_position(index)), index+1
 
     def _to_string(self) -> str:
         return "."
@@ -468,7 +468,7 @@ class MatcherMatchAll(MatcherList):
                 return None, old_index
             children.append(child)
 
-        node = ParseTreeNode(*parseData.get_position(index))
+        node = ParseTreeNode(parseData.get_position(index))
         for child in children:
             node.add_child(child)
 
@@ -520,7 +520,7 @@ class MatcherMatchRange(Matcher):
         if parseData[index] < self.first or parseData[index] > self.last:
             return None, index
 
-        return ParseTreeExactMatch(parseData[index], *parseData.get_position(index)), index+1
+        return ParseTreeExactMatch(parseData[index], parseData.get_position(index)), index+1
     
     def _to_string(self) -> str:
         return f"'{self.first}{self.last}'"
@@ -538,7 +538,7 @@ class MatcherMatchExact(Matcher):
         if not parseData.startswith(self.value, index):
             return None, index
 
-        return ParseTreeExactMatch(self.value, *parseData.get_position(index)), index+len(self.value)
+        return ParseTreeExactMatch(self.value, parseData.get_position(index)), index+len(self.value)
     
     def _to_string(self) -> str:
         return f"\"{escape_string(self.value)}\""
@@ -581,7 +581,7 @@ class MatcherMatchStack(Matcher):
             to_match = ""
 
         if parseData.startswith(to_match, index):
-            return ParseTreeExactMatch(to_match, *parseData.get_position(index)), index+len(to_match)
+            return ParseTreeExactMatch(to_match, parseData.get_position(index)), index+len(to_match)
 
         return None, index
     
