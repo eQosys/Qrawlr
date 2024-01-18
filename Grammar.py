@@ -1,8 +1,13 @@
 from GrammarRule import ParseData
-from GrammarTools import escape_string
-from GrammarParseTree import ParseTree
+from GrammarTools import Position
+from GrammarParseTree import ParseTree, ParseTreeNode
 from GrammarLoader import GrammarLoader
 from GrammarException import GrammarException
+
+class ParseResult:
+    def __init__(self, tree: ParseTree, farthes_match_position: Position) -> None:
+        self.tree = tree
+        self.farthes_match_position = farthes_match_position
 
 class Grammar:
     def __init__(self, filename: str = None) -> None:
@@ -11,7 +16,7 @@ class Grammar:
         if filename is not None:
             self.rules = GrammarLoader(filename).rules
 
-    def apply_to(self, text: str, rule: str, filename: str) -> ParseTree:
+    def apply_to(self, text: str, rule: str, filename: str) -> ParseResult:
         if rule not in self.rules:
             raise GrammarException(f"Rule '{rule}' not found")
         
@@ -19,13 +24,13 @@ class Grammar:
 
         tree, _ = parseData.get_rule(rule).match(parseData, 0)
 
-        if tree is not None:
+        if tree is not None and isinstance(tree, ParseTreeNode):
             tree.name = rule
 
         if not parseData.stacks_are_empty():
             raise GrammarException("Stacks not empty after parsing")
 
-        return tree
+        return ParseResult(tree, parseData.get_position(parseData.farthest_match_index))
 
     def generate_python_code(self, func_name: str = "load_grammar_grammar", add_includes: bool = True) -> str:
         result = ""

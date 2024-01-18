@@ -1,11 +1,32 @@
 Expression:
 	Sum
+
 Sum:
-	[ "+" "-" ]? Product ( ["+" "-"] Product )*
+	(
+		[ "+" "-" ]?
+		Product
+		(
+			["+" "-"]
+			Product{ onFail: fail("Expected a product") }
+		)*
+	)
+
 Product:
-	Atom ( [ "*" "/" ] Atom )*
+	(
+		Atom
+		(
+			[ "*" "/" ]
+			Atom{ onFail: fail("Expected an atom") }
+		)*
+	)
+
 Atom:
-	"("_ Expression ")"_
+	(
+		"("_
+		Expression{ onFail: fail("Expected an expression") }
+		")"_{ onFail: fail("Expected a closing parenthesis") }
+	)
 	Number
+
 Number(hidden fuse):
 	'09'+

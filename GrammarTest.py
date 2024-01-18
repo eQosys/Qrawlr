@@ -79,12 +79,17 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None,
     
     g = Grammar(grammarfile)
 
-    tree = g.apply_to(text, entry_rule, filename)
+    result = g.apply_to(text, entry_rule, filename)
     
+    tree = result.tree
+    max_pos = result.farthes_match_position
+
     if tree is None or tree.position_end.index < len(text):
         print("  ERROR: Text was not fully parsed")
-        print(f"    Max index: {g.ruleset.farthest_match_index}", end="" if filename else "\n")
-        print(f"    Remaining text: {repr(text[g.ruleset.farthest_match_index:][:32])}")
+        print(f"    Max index: {max_pos.index}", end="" if filename else "\n")
+        if filename:
+            print(f" -> {filename}:{max_pos.line}:{max_pos.column}")
+        print(f"    Remaining text: {repr(text[max_pos.index:][:32])}")
 
         if tree is None:
             raise GrammarException("Could not parse text")
@@ -114,7 +119,7 @@ def test_grammar(self_only):
     grammar_path = "grammars/grammar_grammar.qgr"
 
     for filename in os.listdir("grammars"):
-        if filename.endswith(".qgr"):
+        if filename.endswith("algebra_grammar.qgr"): # TODO: Remove 'algebra_grammar' from string (for testing purposes only)
             path = os.path.join("grammars", filename)
             if self_only and path != grammar_path:
                 continue
@@ -160,7 +165,7 @@ if __name__ == "__main__":
     try:
         #test_algebra()
         #test_qism()
-        test_grammar(True)
+        test_grammar(False)
         #test_qinp()
         #test_code_generation()
     except GrammarException as e:

@@ -51,10 +51,10 @@ MatchAnyChar:
     "."_
 
 MatchAll(fuse):
-    "("_ Whitespace?_ FullMatcher (Whitespace?_ FullMatcher)* Whitespace?_ ")"_
+    "("_ WoNwoC? FullMatcher (WoNwoC? FullMatcher)* WoNwoC? ")"_
 
 MatchAny:
-    "["_ Whitespace?_ FullMatcher (Whitespace?_ FullMatcher)* Whitespace?_ "]"_
+    "["_ WoNwoC? FullMatcher (WoNwoC? FullMatcher)* WoNwoC? "]"_
 
 MatchRange:
     "'"_ MatchRangeChar#2 "'"_
@@ -95,20 +95,20 @@ MatcherModifierReplaceMatch:
 \\ ---------------- MATCHER ACTIONS ----------------
 
 MatcherActions(hidden):
-    "{"_ Whitespace?_ ( MatcherTrigger ( Whitespace?_ ","_ Whitespace?_ MatcherTrigger )* Whitespace?_ )? "}"_
+    "{"_ WoNwoC? ( MatcherTrigger ( WoNwoC? ","_ WoNwoC? MatcherTrigger )* WoNwoC? )? "}"_
 
 MatcherTrigger:
-    Identifier Whitespace?_ ":"_ Whitespace?_ MatcherActionList
+    Identifier WoNwoC? ":"_ WoNwoC? MatcherActionList
 
 MatcherActionList:
-    "["_ Whitespace?_ ( MatcherAction ( Whitespace?_ ","_ Whitespace?_ MatcherAction )* Whitespace?_ ) "]"_
+    "["_ WoNwoC? ( MatcherAction ( WoNwoC? ","_ WoNwoC? MatcherAction )* WoNwoC? ) "]"_
     MatcherAction
 
 MatcherAction:
-    Identifier Whitespace?_ MatcherActionArgumentList
+    Identifier WoNwoC? MatcherActionArgumentList
 
 MatcherActionArgumentList:
-    "("_ Whitespace?_ ( MatcherActionArgument ( Whitespace?_ ","_ Whitespace?_ MatcherActionArgument )* Whitespace?_ ) ")"_
+    "("_ WoNwoC? ( MatcherActionArgument ( WoNwoC? ","_ WoNwoC? MatcherActionArgument )* WoNwoC? ) ")"_
 
 MatcherActionArgument:
     Identifier
@@ -174,3 +174,7 @@ Newline(hidden):
 
 Whitespace(fuse):
     [ " " "\t" ]+
+
+\\ Whitespace or Newline with optional comment
+WoNwoC(hidden):
+    [ Whitespace_ Newline_ Comment ]+
