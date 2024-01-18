@@ -50,9 +50,17 @@ String(fuse):
 	"\""_ StringChar* "\""_
 
 StringChar(hidden):
-	AlnumChar
-	EscapeChar
-	SpecialChar
+    EscapeSequence
+    "\""!
+
+EscapeSequence(fuse):
+    "\\"_ [ "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\"" ]
+    "\\"_ "x" HexChar HexChar
+
+HexChar(hidden):
+	'09'
+	'af'
+	'AF'
 
 AlnumChar(hidden):
 	AlphaChar
@@ -64,9 +72,3 @@ AlphaChar(hidden):
 
 NumChar(hidden):
 	'09'
-
-EscapeChar(hidden):
-	"\\" [ "\"" "\\" "n" "t" ]
-
-SpecialChar(hidden):
-	[ "(" ")" "[" "]" "{" "}" " " ":" "+" "-" "*" "/" "?" "!" ">" "<" "~" "." "," ";" "'" "_" "=" "&" "|" "^" "@" "#" "$" "%" "`" ]

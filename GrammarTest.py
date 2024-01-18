@@ -119,7 +119,7 @@ def test_grammar(self_only):
     grammar_path = "grammars/grammar_grammar.qgr"
 
     for filename in os.listdir("grammars"):
-        if filename.endswith("algebra_grammar.qgr"): # TODO: Remove 'algebra_grammar' from string (for testing purposes only)
+        if filename.endswith(".qgr"):
             path = os.path.join("grammars", filename)
             if self_only and path != grammar_path:
                 continue
@@ -163,10 +163,10 @@ def test_code_generation():
 
 if __name__ == "__main__":
     try:
-        #test_algebra()
-        #test_qism()
-        test_grammar(False)
+        test_qism()
         #test_qinp()
+        #test_algebra()
+        #test_grammar(False)
         #test_code_generation()
     except GrammarException as e:
         print(f"  ERROR: {e}")
