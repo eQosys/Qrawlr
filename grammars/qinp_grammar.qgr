@@ -48,7 +48,7 @@ IndentationIncrease:
     ( IndentationCurrent Whitespace ){ onMatch: push(_, IndentationStack) }
 
 IndentationDecrease:
-    ""{ onMatch: pop(IndentationStack) }
+    "a"{ onMatch: pop(IndentationStack) }
 
 \\ ---------------- IDENTIFIER ----------------
 

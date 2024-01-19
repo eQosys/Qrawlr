@@ -14,7 +14,7 @@ RuleDefinition:
     RuleHeader [ (Newline Whitespace) Whitespace? ]_ RuleBody
 
 RuleHeader:
-    Identifier RuleModifierList?_ ":"_
+    Identifier RuleModifierList? ":"_
 
 RuleBody:
     RuleOptionDefinition (Newline_ Whitespace_ RuleOptionDefinition)*
@@ -36,7 +36,7 @@ RuleOptionDefinition:
 \\ ---------------- MATCHERS ----------------
 
 FullMatcher:
-    Matcher MatcherModifiers MatcherActions?
+    Matcher MatcherModifiers MatcherActions
 
 Matcher(hidden):
     MatchAnyChar
@@ -50,7 +50,7 @@ Matcher(hidden):
 MatchAnyChar:
     "."_
 
-MatchAll(fuse):
+MatchAll:
     "("_ WoNwoC? FullMatcher (WoNwoC? FullMatcher)* WoNwoC? ")"_
 
 MatchAny:
@@ -59,7 +59,7 @@ MatchAny:
 MatchRange:
     "'"_ MatchRangeChar#2 "'"_
 
-MatchExact(fuse):
+MatchExact:
     String
 
 MatchRule:
@@ -70,8 +70,8 @@ MatchStack:
 
 \\ ---------------- MATCHER MODIFIERS ----------------
 
-MatcherModifiers(hidden):
-    MatcherModifierInvert? MatcherModifierQuantifier? MatcherModifierLookAhead? MatcherModifierOmitMatch? MatcherModifierReplaceMatch?
+MatcherModifiers:
+    [ MatcherModifierInvert MatcherModifierQuantifier MatcherModifierLookAhead MatcherModifierOmitMatch MatcherModifierReplaceMatch ]*
 
 MatcherModifierInvert:
     "!"_
@@ -94,8 +94,9 @@ MatcherModifierReplaceMatch:
 
 \\ ---------------- MATCHER ACTIONS ----------------
 
-MatcherActions(hidden):
+MatcherActions:
     "{"_ WoNwoC? ( MatcherTrigger ( WoNwoC? ","_ WoNwoC? MatcherTrigger )* WoNwoC? )? "}"_
+    ""_
 
 MatcherTrigger:
     Identifier WoNwoC? ":"_ WoNwoC? MatcherActionList
@@ -110,7 +111,7 @@ MatcherAction:
 MatcherActionArgumentList:
     "("_ WoNwoC? ( MatcherActionArgument ( WoNwoC? ","_ WoNwoC? MatcherActionArgument )* WoNwoC? ) ")"_
 
-MatcherActionArgument:
+MatcherActionArgument(hidden):
     Identifier
     String
     "_"_->MatchedText

@@ -77,12 +77,12 @@ def evaluate_expression(tree: ParseTree):
 def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None, verbose: bool = True, do_write_tree: bool = False, do_render_tree: bool = True):
     print(f"INFO: Testing {grammarfile} on {filename}")
     
-    g = Grammar(grammarfile)
+    g = Grammar(path = grammarfile)
 
     result = g.apply_to(text, entry_rule, filename)
     
     tree = result.tree
-    max_pos = result.farthes_match_position
+    max_pos = result.farthest_match_position
 
     if tree is None or tree.position_end.index < len(text):
         print("  ERROR: Text was not fully parsed")
@@ -144,7 +144,7 @@ def test_qinp():
     run_test("grammars/qinp_grammar.qgr", "GlobalCode", text, filename, verbose = True)
 
 def test_code_generation():
-    g = Grammar("grammars/qinp_grammar.qgr")
+    g = Grammar(path = "grammars/grammar_grammar.qgr")
     pre_str = str(g)
 
     exec(g.generate_python_code("load_dynamic_grammar"), globals())
@@ -161,12 +161,60 @@ def test_code_generation():
     else:
         print("INFO: Grammar strings match")
 
+def generate_bootstrap():
+    # Load new grammar with current grammar implementation
+    grammar_path = "grammars/grammar_grammar.qgr"
+    g = Grammar(path = grammar_path)
+    with open(grammar_path, "r") as f:
+        text = f.read()
+
+    old_g_str = str(g)
+
+    result = g.apply_to(text, "Grammar", grammar_path)
+    tree = result.tree
+    max_pos = result.farthest_match_position
+
+    if tree is None or tree.position_end.index < len(text):
+        print(f"    Max index: {max_pos.index} -> {grammar_path}:{max_pos.line}:{max_pos.column}")
+        print(f"    Remaining text: {repr(text[max_pos.index:][:32])}")
+
+        raise GrammarException("Could not parse new grammar")
+    else:
+        print("INFO: Fully parsed new grammar")
+
+    g = Grammar(init_tree = result.tree)
+
+    new_g_str = str(g)
+
+    if old_g_str != new_g_str:
+        print("ERROR: Grammar strings do not match")
+    else:
+        print("INFO: Grammar strings match")
+
+    result = g.apply_to(text, "Grammar", grammar_path)
+    tree = result.tree
+    max_pos = result.farthest_match_position
+
+    if tree is None or tree.position_end.index < len(text):
+        print(f"    Max index: {max_pos.index} -> {grammar_path}:{max_pos.line}:{max_pos.column}")
+        print(f"    Remaining text: {repr(text[max_pos.index:][:32])}")
+
+        raise GrammarException("Could not parse new grammar")
+    else:
+        print("INFO: Fully parsed new grammar")
+
+    # Generate new grammar implementation
+    code = g.generate_python_code("load_grammar_grammar")
+    with open("generated_grammar_loader.py", "w") as f:
+        f.write(code)
+
 if __name__ == "__main__":
     try:
-        test_qism()
+        #test_qism()
         #test_qinp()
         #test_algebra()
-        #test_grammar(False)
+        #test_grammar(True)
         #test_code_generation()
+        generate_bootstrap()
     except GrammarException as e:
         print(f"  ERROR: {e}")

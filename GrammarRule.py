@@ -371,11 +371,15 @@ class Matcher(ABC):
 
         if self.match_repl is not None:
             mod_str += "->"
-            is_string, repl = self.match_repl
-            if is_string:
+            repl_type, repl = self.match_repl
+            if repl_type == MATCH_REPL_STRING:
                 mod_str += f"\"{escape_string(repl)}\""
-            else:
+            elif repl_type == MATCH_REPL_STACK:
+                mod_str += f":{escape_string(repl)}"
+            elif repl_type == MATCH_REPL_IDENTIFIER:
                 mod_str += repl
+            else:
+                raise GrammarException(f"Unknown match replacement type '{repl_type}'")
 
         return mod_str
 
@@ -577,11 +581,11 @@ class MatcherMatchRule(Matcher):
 class MatcherMatchStack(Matcher):
     def __init__(self, name: str, index: int, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.name = name
+        self.stack_name = name
         self.index = index
 
     def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
-        stack = parseData.get_stack(self.name)
+        stack = parseData.get_stack(self.stack_name)
 
         if self.index < len(stack):
             to_match = stack[-self.index-1]
@@ -594,10 +598,10 @@ class MatcherMatchStack(Matcher):
         return None, index
     
     def _to_string(self) -> str:
-        return f":{escape_string(self.name)}.{self.index}:"
+        return f":{escape_string(self.stack_name)}.{self.index}:"
 
     def _generate_python_code(self) -> str:
-        return f"MatcherMatchStack(\"{escape_string(self.name)}\", {self.index}, {self._initializers_to_arg_str()})"
+        return f"MatcherMatchStack(\"{escape_string(self.stack_name)}\", {self.index}, {self._initializers_to_arg_str()})"
 
 class Rule(MatcherMatchAny):
     def __init__(self, name=None, anonymous=False, fuse_children=False, *args, **kwargs) -> None:

@@ -8,12 +8,30 @@ NAME_TYPE_STACK = "Stack name"
 HEX_DIGITS = "0123456789abcdefABCDEF"
 
 class GrammarLoader:
-    def __init__(self, filename: str) -> None:
-        self.filename: str = filename
-        self.optional_names = set[str]()
-        self.__load_lines()
-        self.__load_rules()
+    def __init__(self, path: str = None, init_tree: ParseTree = None) -> None:
+        self.__referenced_rules: dict[str, tuple(bool, list[tuple[int, int]])] = {}
+        self.rules = dict()
+
+        if path is not None:
+            self.__load_rules_from_file(path)
+        elif init_tree is not None:
+            self.__load_rules_from_tree(init_tree)
+        else:
+            raise GrammarException("GrammarLoader needs either a path or a tree")
+
         self.__check_for_unknown_references()
+
+    def __load_rules_from_file(self, path: str) -> None:
+        self.filename = path
+
+        self.__load_lines()
+
+        while True:
+            try:
+                rule = self.__get_parse_rule_definition()
+                self.rules[rule.name] = rule
+            except IndexError:
+                break
 
     def __load_lines(self) -> None:
         self.lines: list[tuple[int, str]] = []
@@ -28,19 +46,6 @@ class GrammarLoader:
                 if line.startswith("\\"):
                     continue
                 self.lines.append((lineCount, line))
-
-    def __load_rules(self) -> None:
-        self.__referenced_rules: dict[str, tuple(bool, list[tuple[int, int]])] = {}
-
-        self.rules = dict()
-        self.stack_names = set()
-
-        while True:
-            try:
-                rule = self.__get_parse_rule_definition()
-                self.rules[rule.name] = rule
-            except IndexError:
-                break
 
     def __check_if_rule_name_exists(self, name: str, col: int) -> None:
         if name in self.rules.keys():
@@ -538,7 +543,6 @@ class GrammarLoader:
             return (MATCH_REPL_STACK, f"{rOpt.name}.{rOpt.index}"), col
 
         name, col = self.__get_parse_identifier(line, col)
-        self.optional_names.add(name)
         return (MATCH_REPL_IDENTIFIER, name), col
 
     def __parse_whitespace(self, line: str, col: int, optional: bool) -> int:
@@ -558,6 +562,290 @@ class GrammarLoader:
         id, line = self.lines.pop(0)
         self.__last_line_id = id
         return line
+    
+    def __is_exact_match(self, tree: ParseTree, value: str = None) -> bool:
+        if not isinstance(tree, ParseTreeExactMatch):
+            return False
+        if value is not None and tree.value != value:
+            return False
+        return True
+
+    def __expect_exact_match(self, tree: ParseTree, value: str = None) -> None:
+        if not self.__is_exact_match(tree, value):
+            raise GrammarException("Expected 'ParseTreeExactMatch' but got", type(tree))
+
+    def __is_node(self, tree: ParseTree, name: str = None) -> bool:
+        if not isinstance(tree, ParseTreeNode):
+            return False
+        if name is not None and tree.name != name:
+            return False
+        return True
+
+    def __expect_node(self, tree: ParseTree, name: str = None) -> None:
+        if not self.__is_node(tree, name):
+            raise GrammarException(f"Expected '{name}' but got", tree.name)
+
+    def __load_rules_from_tree(self, init_tree: ParseTree) -> None:
+        self.__expect_node(init_tree)
+        
+        for child in init_tree.children:
+            self.__expect_node(child)
+            
+            if self.__is_node(child, "RuleDefinition"):
+                rule = self.__load_rule_definition_from_tree(child)
+                self.rules[rule.name] = rule
+            elif self.__is_node(child, "Comment"):
+                pass
+            elif self.__is_node(child):
+                raise GrammarException("Expected 'RuleDefinition' but got", child.name)
+            else:
+                raise GrammarException("Expected 'ParseTreeNode' but got", type(child))
+
+    def __load_rule_definition_from_tree(self, tree: ParseTree) -> Rule:
+        self.__expect_node(tree, "RuleDefinition")
+
+        if len(tree.children) < 2:
+            raise GrammarException("Expected at least 2 children but got", len(tree.children))
+
+        rule = self.__load_rule_header_from_tree(tree.children[0])
+        rule.options = self.__load_rule_body_from_tree(tree.children[1])
+
+        return rule
+    
+    def __load_rule_header_from_tree(self, tree: ParseTree) -> Rule:
+        self.__expect_node(tree, "RuleHeader")
+
+        rule = Rule()
+
+        self.__expect_node(tree.children[0], "Identifier")
+        rule.name = tree.children[0].children[0].value
+
+        if rule.name in self.rules:
+            raise GrammarException(f"'{rule.name}' already exists")
+
+        for i in range(1, len(tree.children)):
+            child = tree.children[i]
+            if self.__is_node(child, "RuleModifier"):
+                self.__load_rule_modifier_from_tree(rule, child)
+            else:
+                raise GrammarException("Expected 'RuleModifier' but got", child.name)
+
+        return rule
+    
+    def __load_rule_modifier_from_tree(self, rule: Rule, tree: ParseTree) -> None:
+        self.__expect_node(tree, "RuleModifier")
+
+        name = tree.children[0].value
+
+        if name == "hidden":
+            rule.anonymous = True
+        elif name == "fuse":
+            rule.fuse_children = True
+        else:
+            raise GrammarException("Unknown rule modifier", name)
+        
+    def __load_rule_body_from_tree(self, tree: ParseTree) -> None:
+        self.__expect_node(tree, "RuleBody")
+
+        options = []
+        for child in tree.children:
+            if self.__is_node(child, "RuleOptionDefinition"):
+                options.append(self.__load_rule_option_definition_from_tree(child))
+            elif self.__is_node(child, "Comment"):
+                pass
+            elif self.__is_node(child):
+                raise GrammarException("Expected 'RuleOptionDefinition' but got", child.name)
+            else:
+                raise GrammarException("Expected 'ParseTreeNode' but got", type(child))
+            
+        return options
+
+    def __load_rule_option_definition_from_tree(self, tree: ParseTree) -> Matcher:
+        self.__expect_node(tree, "RuleOptionDefinition")
+
+        if len(tree.children) == 0:
+            raise GrammarException("Expected at least 1 matcher but got 0")
+
+        rule_option = MatcherMatchAll()
+
+        for child in tree.children:
+            rule_option.options.append(self.__load_full_matcher_from_tree(child))
+
+        return rule_option
+    
+    def __load_full_matcher_from_tree(self, tree: ParseTree) -> Matcher:
+        self.__expect_node(tree, "FullMatcher")
+
+        if len(tree.children) != 3:
+            raise GrammarException("Expected 3 children but got", len(tree.children))
+
+        matcher = self.__load_matcher_from_tree(tree.children[0])
+
+        self.__load_matcher_modifiers_from_tree(matcher, tree.children[1])
+        self.__load_matcher_actions_from_tree(matcher, tree.children[2])
+
+        return matcher
+    
+    def __load_matcher_from_tree(self, tree: ParseTree) -> Matcher:
+        self.__expect_node(tree)
+
+        if self.__is_node(tree, "MatchAnyChar"):
+            matcher = MatcherMatchAnyChar()
+        elif self.__is_node(tree, "MatchAll"):
+            matcher = MatcherMatchAll()
+            for child in tree.children:
+                matcher.options.append(self.__load_full_matcher_from_tree(child))
+        elif self.__is_node(tree, "MatchAny"):
+            matcher = MatcherMatchAny()
+            for child in tree.children:
+                matcher.options.append(self.__load_full_matcher_from_tree(child))
+        elif self.__is_node(tree, "MatchRange"):
+            matcher = MatcherMatchRange(tree.children[0].children[0].value, tree.children[1].children[0].value)
+        elif self.__is_node(tree, "MatchExact"):
+            matcher = MatcherMatchExact(self.__load_string_from_tree(tree.children[0]))
+        elif self.__is_node(tree, "MatchRule"):
+            matcher = MatcherMatchRule(tree.children[0].children[0].value)
+        elif self.__is_node(tree, "MatchStack"):
+            matcher = MatcherMatchStack(tree.children[0].children[0].value, self.__load_integer_from_tree(tree.children[1]))
+        else:
+            raise GrammarException(f"Unknown matcher '{tree.name}'")
+        
+        return matcher
+    
+    def __load_string_from_tree(self, tree: ParseTree) -> str:
+        self.__expect_node(tree, "String")
+        result = ""
+
+        for child in tree.children:
+            if self.__is_node(child, "EscapeSequence"):
+                result += self.__load_escape_sequence_from_tree(child)
+            elif self.__is_exact_match(child):
+                result += child.value
+
+        return result
+
+    def __load_escape_sequence_from_tree(self, tree: ParseTree) -> str:
+        self.__expect_node(tree, "EscapeSequence")
+
+        value = tree.children[0].value
+
+        if value.startswith("x"):
+            return chr(int(value[1:], 16))
+        
+        return eval(f"'\\{value}'")
+
+    def __load_matcher_modifiers_from_tree(self, matcher: Matcher, tree: ParseTree) -> None:
+        self.__expect_node(tree, "MatcherModifiers")
+
+        for child in tree.children:
+            if self.__is_node(child, "MatcherModifierInvert"):
+                matcher.inverted = True
+            elif self.__is_node(child, "MatcherModifierQuantifier"):
+                self.__load_matcher_modifier_quantifier_from_tree(matcher, child)
+            elif self.__is_node(child, "MatcherModifierLookAhead"):
+                matcher.look_ahead = True
+            elif self.__is_node(child, "MatcherModifierOmitMatch"):
+                matcher.omit_match = True
+            elif self.__is_node(child, "MatcherModifierReplaceMatch"):
+                matcher.match_repl = self.__load_matcher_modifier_replace_match_from_tree(child)
+            elif self.__is_node(child):
+                raise GrammarException("Expected 'MatcherModifier' but got", child.name)
+            else:
+                raise GrammarException("Expected 'ParseTreeNode' but got", type(child))
+    
+    def __load_matcher_modifier_quantifier_from_tree(self, matcher: Matcher, tree: ParseTree) -> None:
+        self.__expect_node(tree, "MatcherModifierQuantifier")
+        tree = tree.children[0]
+
+        if self.__is_node(tree, "QuantifierSymbolic"):
+            if tree.children[0].value == QUANTIFIER_ZERO_OR_ONE:
+                matcher.count_min = 0
+                matcher.count_max = 1
+            elif tree.children[0].value == QUANTIFIER_ZERO_OR_MORE:
+                matcher.count_min = 0
+                matcher.count_max = -1
+            elif tree.children[0].value == QUANTIFIER_ONE_OR_MORE:
+                matcher.count_min = 1
+                matcher.count_max = -1
+            else:
+                raise GrammarException("Unknown quantifier", tree.children[0].value)
+        elif self.__is_node(tree, "QuantifierRange"):
+            matcher.count_min = self.__load_integer_from_tree(tree.children[0])
+            matcher.count_max = self.__load_integer_from_tree(tree.children[1])
+        elif self.__is_node(tree, "QuantifierExact"):
+            matcher.count_min = self.__load_integer_from_tree(tree.children[0])
+            matcher.count_max = matcher.count_min
+        elif self.__is_node(tree, "QuantifierLowerBound"):
+            matcher.count_min = self.__load_integer_from_tree(tree.children[0]) + 1
+            matcher.count_max = -1
+        elif self.__is_node(tree, "QuantifierUpperBound"):
+            matcher.count_min = 0
+            matcher.count_max = self.__load_integer_from_tree(tree.children[0]) - 1
+        elif self.__is_node(tree):
+            raise GrammarException("Expected 'Quantifier' but got", tree.name)
+        else:
+            raise GrammarException("Expected 'ParseTreeNode' but got", type(tree))
+
+    def __load_matcher_modifier_replace_match_from_tree(self, tree: ParseTree) -> tuple[int, str]:
+        self.__expect_node(tree, "MatcherModifierReplaceMatch")
+        tree = tree.children[0]
+
+        if self.__is_node(tree, "Identifier"):
+            return (MATCH_REPL_IDENTIFIER, tree.children[0].value)
+        elif self.__is_node(tree, "String"):
+            return (MATCH_REPL_STRING, tree.children[0].value)
+        elif self.__is_node(tree, "MatchStack"):
+            return (MATCH_REPL_STACK, f"{tree.children[0].children[0].value}.{self.__load_integer_from_tree(tree.children[1])}")
+
+    def __load_matcher_actions_from_tree(self, matcher: Matcher, tree: ParseTree) -> None:
+        self.__expect_node(tree, "MatcherActions")
+
+        for child in tree.children:
+            self.__load_matcher_trigger_from_tree(matcher, child)
+
+    def __load_matcher_trigger_from_tree(self, matcher: Matcher, tree: ParseTree) -> None:
+        self.__expect_node(tree, "MatcherTrigger")
+        
+        trigger_name = tree.children[0].children[0].value
+
+        matcher.actions[trigger_name] = []
+
+        for child in tree.children[1].children:
+            matcher.actions[trigger_name].append(self.__load_matcher_action_from_tree(child))
+
+    def __load_matcher_action_from_tree(self, tree: ParseTree) -> tuple[str, list[tuple[str, str]]]:
+        self.__expect_node(tree, "MatcherAction")
+
+        action_name = tree.children[0].children[0].value
+
+        args = []
+        for child in tree.children[1].children:
+            if self.__is_node(child, "Identifier"):
+                args.append((ACTION_ARG_TYPE_IDENTIFIER, child.children[0].value))
+            elif self.__is_node(child, "String"):
+                args.append((ACTION_ARG_TYPE_STRING, child.children[0].value))
+            elif self.__is_node(child, "Match"):
+                args.append((ACTION_ARG_TYPE_MATCH, None))
+            else:
+                raise GrammarException("Expected 'Identifier', 'String' or 'Match' but got", child.name)
+
+        return (action_name, args)
+
+    def __load_integer_from_tree(self, tree: ParseTree) -> int:
+        self.__expect_node(tree, "Integer")
+        base_str = tree.children[1].name
+        if base_str == "FormatHex":
+            base = 16
+        elif base_str == "FormatBin":
+            base = 2
+        elif base_str == "FormatOct":
+            base = 8
+        elif base_str == "FormatDec":
+            base = 10
+        else:
+            raise GrammarException("Unknown integer format", base_str)
+
+        return int(tree.children[0].value, base)
 
     def __make_exception(self, msg: str, column: int = None, line: int = None, addPosition: bool = True) -> GrammarException:
         if addPosition:

@@ -5,16 +5,20 @@ from GrammarLoader import GrammarLoader
 from GrammarException import GrammarException
 
 class ParseResult:
-    def __init__(self, tree: ParseTree, farthes_match_position: Position) -> None:
+    def __init__(self, tree: ParseTree, farthest_match_position: Position) -> None:
         self.tree = tree
-        self.farthes_match_position = farthes_match_position
+        self.farthest_match_position = farthest_match_position
 
 class Grammar:
-    def __init__(self, filename: str = None) -> None:
+    def __init__(self, rules: dict = None, path: str = None, init_tree = None) -> None:
         self.rules = dict()
         
-        if filename is not None:
-            self.rules = GrammarLoader(filename).rules
+        if rules is not None:
+            self.rules = rules
+        elif path is not None:
+            self.rules = GrammarLoader(path=path).rules
+        elif init_tree is not None:
+            self.rules = GrammarLoader(init_tree=init_tree).rules
 
     def apply_to(self, text: str, rule: str, filename: str) -> ParseResult:
         if rule not in self.rules:
@@ -48,9 +52,7 @@ class Grammar:
         for name, rule in self.rules.items():
             result += f"    rules['{name}'] = {rule._generate_python_code()}\n"
 
-        result += "    g = Grammar()\n"
-        result += "    g.rules = rules\n"
-        result += "    return g\n"
+        result += "    return Grammar(rules=rules)\n"
 
         return result
 
