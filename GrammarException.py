@@ -10,4 +10,7 @@ class GrammarException(Exception):
                 pos_str += "<unknown>"
             pos_str += f":{position.line}:{position.column}"
 
-        super().__init__(f"{pos_str}: {message}")
+        if pos_str:
+            pos_str += ": "
+
+        super().__init__(f"{pos_str}{message}")
