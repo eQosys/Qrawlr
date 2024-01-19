@@ -14,7 +14,7 @@ class Grammar:
 
     def apply_to(self, text: str, rule: str, filename: str) -> ParseResult:
         if rule not in self.rules:
-            raise GrammarException(f"Rule '{rule}' not found")
+            raise GrammarException(f"Unknown rule '{rule}'")
         
         parseData = ParseData(text, filename, self.rules)
 
@@ -24,7 +24,7 @@ class Grammar:
             tree.name = rule
 
         if not parseData.stacks_are_empty():
-            raise GrammarException("Stacks not empty after parsing")
+            raise GrammarException(f"Stacks not empty after parsing. Data: {dict(map(lambda stack_name: (stack_name, parseData.get_stack(stack_name)), parseData.get_stack_names()))}")
 
         return ParseResult(tree, parseData.get_position(parseData.farthest_match_index))
 
@@ -37,6 +37,7 @@ class Grammar:
             result += "from GrammarRule import MatcherMatchAll, MatcherMatchAny\n"
             result += "from GrammarRule import MatcherMatchRange, MatcherMatchExact\n"
             result += "from GrammarRule import MatcherMatchRule, MatcherMatchStack\n"
+            result += "\n"
 
         result += f"def {func_name}() -> Grammar:\n"
 

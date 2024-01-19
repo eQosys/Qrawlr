@@ -2,7 +2,7 @@ from GrammarRule import *
 from Grammar import Grammar
 from GrammarException import GrammarException
 
-from generated_grammar_loader import load_grammar_grammar
+from InternalGrammarLoader import load_internal_grammar
 
 HEX_DIGITS = "0123456789abcdefABCDEF"
 
@@ -29,7 +29,7 @@ class GrammarLoader:
         with open(path, "r") as f:
             text = f.read()
 
-        g = load_grammar_grammar()
+        g = load_internal_grammar()
         result = g.apply_to(text, "Grammar", path)
         tree = result.tree
         max_pos = result.farthest_match_position
@@ -226,7 +226,7 @@ class GrammarLoader:
             return chr(int(value[1:], 16))
     
         if len(value) != 1 or ord(value) not in SHORT_ESCAPES:
-            raise self.__make_exception("Unknown escape sequence", col)
+            raise self.__make_exception("Unknown escape sequence", tree.position_begin)
 
         return value.translate(SHORT_ESCAPES)        
 
@@ -347,9 +347,4 @@ class GrammarLoader:
         return int(tree.children[0].value, base)
 
     def __make_exception(self, msg: str, pos: Position = None) -> GrammarException:
-        if pos is not None:
-            path = "<unknown>" if self.__path is None else self.__path
-            errPos = f"{path}:{pos.line}:{pos.column}:"
-        else:
-            errPos = ""
-        return GrammarException(f"{errPos} {msg}")
+        return GrammarException(msg, self.__path, pos)

@@ -3,7 +3,7 @@ import bisect
 from abc import ABC, abstractmethod
 
 from GrammarParseTree import *
-from GrammarException import *
+from GrammarException import GrammarException
 
 QUANTIFIER_ZERO_OR_ONE = "?"
 QUANTIFIER_ZERO_OR_MORE = "*"
@@ -42,6 +42,9 @@ class ParseData:
 
     def get_rule(self, name: str) -> "Rule":
         return self.__rules[name]
+
+    def get_stack_names(self) -> list[str]:
+        return list(self.__stacks.keys())
 
     def get_stack(self, name: str) -> list[str]:
         if name not in self.__stacks:
