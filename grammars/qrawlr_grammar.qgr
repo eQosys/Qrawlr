@@ -11,18 +11,45 @@ GrammarLine(hidden):
 \\ ---------------- RULE DEFINITION ----------------
 
 RuleDefinition:
-    RuleHeader [ (Newline Whitespace) Whitespace? ]_ RuleBody
+    (
+        RuleHeader
+        Whitespace?_ (Newline_ Whitespace_)?
+        RuleBody{ onFail: fail("Expected rule body") }
+    )
 
 RuleHeader:
-    Identifier RuleModifierList? ":"_
+    (
+        Identifier
+        RuleModifierList?
+        Whitespace?_
+        ":"_{ onFail: fail("Expected ':'") }
+    )
 
 RuleBody:
-    RuleOptionDefinition (Newline_ Whitespace_ RuleOptionDefinition)*
+    (
+        RuleOptionDefinition
+        Whitespace?_
+        (
+            Newline_
+            Whitespace_
+            RuleOptionDefinition
+        )*
+    )
 
 \\ ---------------- RULE MODIFIERS ----------------
 
 RuleModifierList(hidden):
-    "("_ RuleModifier (Whitespace_ RuleModifier)* ")"_
+    (
+        "("_
+        Whitespace?_
+        RuleModifier{ onFail: fail("Expected at least one rule modifier") }
+        (
+            Whitespace_
+            RuleModifier
+        )*
+        Whitespace?_
+        ")"_{ onFail: fail("Expected ')'") }
+    )
 
 RuleModifier:
     "hidden"
@@ -31,7 +58,13 @@ RuleModifier:
 \\ ---------------- RULE OPTION ----------------
 
 RuleOptionDefinition:
-    FullMatcher (Whitespace?_ FullMatcher)*
+    (
+        FullMatcher
+        (
+            Whitespace?_
+            FullMatcher
+        )*
+    )
 
 \\ ---------------- MATCHERS ----------------
 
@@ -51,13 +84,27 @@ MatchAnyChar:
     "."_
 
 MatchAll:
-    "("_ WoNwoC? FullMatcher (WoNwoC? FullMatcher)* WoNwoC? ")"_
+    (
+        "("_ WoNwoC?
+        FullMatcher
+        (WoNwoC? FullMatcher)*
+        WoNwoC? ")"_{ onFail: fail("Expected ')'") }
+    )
 
 MatchAny:
-    "["_ WoNwoC? FullMatcher (WoNwoC? FullMatcher)* WoNwoC? "]"_
+    (
+        "["_ WoNwoC?
+        FullMatcher
+        (WoNwoC? FullMatcher)*
+        WoNwoC? "]"_{ onFail: fail("Expected ']'") }
+    )
 
 MatchRange:
-    "'"_ MatchRangeChar#2 "'"_
+    (
+        "'"_
+        MatchRangeChar#2{ onFail: fail("Expected exactly two characters")}
+        "'"_{ onFail: fail("Expected '''") }
+    )
 
 MatchExact:
     String
@@ -66,7 +113,13 @@ MatchRule:
     Identifier
 
 MatchStack:
-    ":"_ Identifier "."_ Integer ":"_
+    (
+        ":"_
+        Identifier{ onFail: fail("Expected stack name") }
+        "."_{ onFail: fail("Expected '.'") }
+        Integer{ onFail: fail("Expected stack index") }
+        ":"_{ onFail: fail("Expected ':'") }
+    )
 
 \\ ---------------- MATCHER MODIFIERS ----------------
 
@@ -78,10 +131,10 @@ MatcherModifierInvert:
 
 MatcherModifierQuantifier:
     [ "?" "*" "+" ]->QuantifierSymbolic
-    ( "#"_ Integer "-"_ Integer )->QuantifierRange
+    ( "#"_ Integer "-"_ Integer{ onFail: fail("Expected quantifier range maximum value") } )->QuantifierRange
     ( "#"_ Integer )->QuantifierExact
-    ( "#"_ ">"_ Integer )->QuantifierLowerBound
-    ( "#"_ "<"_ Integer )->QuantifierUpperBound
+    ( "#>"_ Integer{ onFail: fail("Expected lower bound value") } )->QuantifierLowerBound
+    ( "#<"_ Integer{ onFail: fail("Expected upper bound value") } )->QuantifierUpperBound
 
 MatcherModifierLookAhead:
     "~"_
@@ -90,7 +143,7 @@ MatcherModifierOmitMatch:
     "_"_
 
 MatcherModifierReplaceMatch:
-    "->"_ [ Identifier String MatchStack ]
+    "->"_ [ Identifier String MatchStack ]{ onFail: fail("Expected identifier, string or stack reference") }
 
 \\ ---------------- MATCHER ACTIONS ----------------
 
@@ -99,17 +152,49 @@ MatcherActions:
     ""_
 
 MatcherTrigger:
-    Identifier WoNwoC? ":"_ WoNwoC? MatcherActionList
+    (
+        Identifier
+        WoNwoC?
+        ":"_{ onFail: fail("Expected ':'") }
+        WoNwoC?
+        MatcherActionList{ onFail: fail("Expected matcher action list") }
+    )
 
 MatcherActionList:
-    "["_ WoNwoC? ( MatcherAction ( WoNwoC? ","_ WoNwoC? MatcherAction )* WoNwoC? ) "]"_
-    MatcherAction
+    (
+        "["_ WoNwoC?
+        (
+            MatcherAction
+            (
+                WoNwoC?
+                ","_
+                WoNwoC?
+                MatcherAction{ onFail: fail("Expected matcher action after ','")}
+            )*
+            WoNwoC?
+        )
+        "]"_{ onFail: fail("Expected ']'") }
+    )
+    MatcherAction{ onFail: fail("Expected matcher action") }
 
 MatcherAction:
     Identifier WoNwoC? MatcherActionArgumentList
 
 MatcherActionArgumentList:
-    "("_ WoNwoC? ( MatcherActionArgument ( WoNwoC? ","_ WoNwoC? MatcherActionArgument )* WoNwoC? ) ")"_
+    (
+        "("_ WoNwoC?
+        (
+            MatcherActionArgument
+            (
+                WoNwoC?
+                ","_
+                WoNwoC?
+                MatcherActionArgument{ onFail: fail("Expected matcher action argument after ','")}
+            )*
+            WoNwoC?
+        )
+        ")"_{ onFail: fail("Expected ')'") }
+    )
 
 MatcherActionArgument(hidden):
     Identifier
@@ -132,13 +217,17 @@ MatchRangeChar:
     "\\"? .
 
 Integer(fuse):
-    "0x"_ HexChar+ ""_->FormatHex
-    "0b"_ BinChar+ ""_->FormatBin
+    "0x"_ HexChar+{ onFail: fail("Expected hexadecimal integer literal") } ""_->FormatHex
+    "0b"_ BinChar+{ onFail: fail("Expected binary integer literal") } ""_->FormatBin
     "0"_ OctChar+ ""_->FormatOct
     DecChar+ ""_->FormatDec
 
 String(fuse):
-    "\""_ StringChar* "\""_
+    (
+        "\""_
+        StringChar*
+        "\""_{ onFail: fail("Expected '\"'") }
+    )
 
 StringChar(hidden):
     EscapeSequence
@@ -146,7 +235,7 @@ StringChar(hidden):
 
 EscapeSequence(fuse):
     "\\"_ [ "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\"" ]
-    "\\"_ "x" HexChar HexChar
+    "\\"_ "x" (HexChar HexChar){ onFail: fail("Expected hexadecimal escape sequence") }
 
 AlphaChar(hidden):
     'az'

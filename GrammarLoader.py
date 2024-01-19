@@ -71,7 +71,7 @@ class GrammarLoader:
 
     def __expect_node(self, tree: ParseTree, name: str = None) -> None:
         if not self.__is_node(tree):
-            raise self.__make_exception(f"Expected 'ParseTreeNode' but got '{type(tree)}'", tree.position_begin)
+            raise self.__make_exception(f"[expect_node] Expected 'ParseTreeNode' but got '{type(tree)}'", tree.position_begin)
         if not self.__is_node(tree, name):
             raise self.__make_exception(f"Expected '{name}' but got '{tree.name}", tree.position_begin)
 
@@ -87,7 +87,7 @@ class GrammarLoader:
             elif self.__is_node(child):
                 raise self.__make_exception(f"Expected 'RuleDefinition' or 'Comment' but got {child.name}", child.position_begin)
             else:
-                raise self.__make_exception(f"Expected 'ParseTreeNode' but got {type(child)}", child.position_begin)
+                raise self.__make_exception(f"[*load_rules*] Expected 'ParseTreeNode' but got {type(child)}", child.position_begin)
 
     def __load_rule_definition_from_tree(self, tree: ParseTree) -> Rule:
         self.__expect_node(tree, "RuleDefinition")
@@ -141,7 +141,7 @@ class GrammarLoader:
             elif self.__is_node(child):
                 raise self.__make_exception(f"Expected 'RuleOptionDefinition' or 'Comment' but got {child.name}", child.position_begin)
             else:
-                raise self.__make_exception(f"Expected 'ParseTreeNode' but got {type(child)}", child.position_begin)
+                raise self.__make_exception(f"[*load_rule_body*] Expected 'ParseTreeNode' but got {type(child)}", child.position_begin)
             
         return options
 
@@ -247,7 +247,7 @@ class GrammarLoader:
             elif self.__is_node(child):
                 raise self.__make_exception(f"Expected 'MatcherModifier*' but got '{child.name}'", child.position_begin)
             else:
-                raise self.__make_exception(f"Expected 'ParseTreeNode' but got '{type(child)}'", child.position_begin)
+                raise self.__make_exception(f"[*load_matcher_modifiers*] Expected 'ParseTreeNode' but got '{type(child)}'", child.position_begin)
     
     def __load_matcher_modifier_quantifier_from_tree(self, matcher: Matcher, tree: ParseTree) -> None:
         self.__expect_node(tree, "MatcherModifierQuantifier")
@@ -281,7 +281,7 @@ class GrammarLoader:
         elif self.__is_node(tree):
             raise self.__make_exception(f"Expected 'Quantifier*' but got '{tree.name}'", tree.position_begin)
         else:
-            raise self.__make_exception(f"Expected 'ParseTreeNode' but got '{type(tree)}'", tree.position_begin)
+            raise self.__make_exception(f"[*load_matcher_modifier_quantifier*] Expected 'ParseTreeNode' but got '{type(tree)}'", tree.position_begin)
 
     def __load_matcher_modifier_replace_match_from_tree(self, tree: ParseTree) -> tuple[int, str]:
         self.__expect_node(tree, "MatcherModifierReplaceMatch")
@@ -326,7 +326,7 @@ class GrammarLoader:
             elif self.__is_node(child):
                 raise self.__make_exception(f"Expected 'Identifier', 'String' or 'Match' but got '{child.name}'", child.position_begin)
             else:
-                raise self.__make_exception(f"Expected 'ParseTreeNode' but got '{type(child)}'", child.position_begin)
+                raise self.__make_exception(f"[*load_matcher_action*] Expected 'ParseTreeNode' but got '{type(child)}'", child.position_begin)
 
         return (action_name, args)
 

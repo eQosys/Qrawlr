@@ -147,8 +147,8 @@ def test_qinp():
 if __name__ == "__main__":
     try:
         #test_qism()
-        test_qinp()
+        #test_qinp()
         #test_algebra()
-        #test_grammar(True)
+        test_grammar(True)
     except GrammarException as e:
         print(f"  ERROR: {e}")
