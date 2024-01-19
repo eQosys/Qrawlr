@@ -1,7 +1,6 @@
 from GrammarRule import ParseData
 from GrammarTools import Position
 from GrammarParseTree import ParseTree, ParseTreeNode
-from GrammarLoader import GrammarLoader
 from GrammarException import GrammarException
 
 class ParseResult:
@@ -10,15 +9,8 @@ class ParseResult:
         self.farthest_match_position = farthest_match_position
 
 class Grammar:
-    def __init__(self, rules: dict = None, path: str = None, init_tree = None) -> None:
-        self.rules = dict()
-        
-        if rules is not None:
-            self.rules = rules
-        elif path is not None:
-            self.rules = GrammarLoader(path=path).rules
-        elif init_tree is not None:
-            self.rules = GrammarLoader(init_tree=init_tree).rules
+    def __init__(self, rules: dict) -> None:
+        self.rules = rules
 
     def apply_to(self, text: str, rule: str, filename: str) -> ParseResult:
         if rule not in self.rules:

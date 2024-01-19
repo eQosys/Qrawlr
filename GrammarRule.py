@@ -593,7 +593,8 @@ class MatcherMatchStack(Matcher):
             to_match = ""
 
         if parseData.startswith(to_match, index):
-            return ParseTreeExactMatch(to_match, parseData.get_position(index)), index+len(to_match)
+            last_index = index + len(to_match)
+            return ParseTreeExactMatch(to_match, parseData.get_position(index), parseData.get_position(last_index)), last_index
 
         return None, index
     

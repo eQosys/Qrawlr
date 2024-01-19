@@ -1,6 +1,7 @@
 import os
 import json
-from Grammar import Grammar, GrammarException
+from Grammar import GrammarException
+from GrammarLoader import GrammarLoader
 from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 
 def load_dynamic_grammar():
@@ -77,7 +78,7 @@ def evaluate_expression(tree: ParseTree):
 def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None, verbose: bool = True, do_write_tree: bool = False, do_render_tree: bool = True):
     print(f"INFO: Testing {grammarfile} on {filename}")
     
-    g = Grammar(path = grammarfile)
+    g = GrammarLoader(path = grammarfile).get_grammar()
 
     result = g.apply_to(text, entry_rule, filename)
     
@@ -144,7 +145,7 @@ def test_qinp():
     run_test("grammars/qinp_grammar.qgr", "GlobalCode", text, filename, verbose = True)
 
 def test_code_generation():
-    g = Grammar(path = "grammars/grammar_grammar.qgr")
+    g = GrammarLoader(path = "grammars/grammar_grammar.qgr").get_grammar()
     pre_str = str(g)
 
     exec(g.generate_python_code("load_dynamic_grammar"), globals())
@@ -164,7 +165,7 @@ def test_code_generation():
 def generate_bootstrap():
     # Load new grammar with current grammar implementation
     grammar_path = "grammars/grammar_grammar.qgr"
-    g = Grammar(path = grammar_path)
+    g = GrammarLoader(path = grammar_path).get_grammar()
     with open(grammar_path, "r") as f:
         text = f.read()
 
@@ -182,7 +183,7 @@ def generate_bootstrap():
     else:
         print("INFO: Fully parsed new grammar")
 
-    g = Grammar(init_tree = result.tree)
+    g = GrammarLoader(init_tree = tree).get_grammar()
 
     new_g_str = str(g)
 
@@ -213,8 +214,8 @@ if __name__ == "__main__":
         #test_qism()
         #test_qinp()
         #test_algebra()
-        #test_grammar(True)
+        test_grammar(False)
         #test_code_generation()
-        generate_bootstrap()
+        #generate_bootstrap()
     except GrammarException as e:
         print(f"  ERROR: {e}")
