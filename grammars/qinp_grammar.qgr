@@ -131,8 +131,21 @@ FunctionSpecifier:
 \\ ---------------- DATATYPES ----------------
 
 Datatype:
-    Identifier->Named
-    ( "?"_ Identifier{ onFail: fail("Expected function blueprint parameter name") } )->Blueprint
+    (
+        "?"_
+        Identifier{ onFail: fail("Expected function blueprint parameter name") }
+    )->Blueprint
+    (
+        Identifier
+        Whitespace?_
+        ("const"_->Const)?
+        (
+            Whitespace?_
+            "*"_->Pointer
+            Whitespace?_
+        ("const"_->Const)?
+        )*
+    )->Named
 
 \\ ---------------- INDENTATION ----------------
 
