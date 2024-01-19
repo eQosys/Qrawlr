@@ -1,109 +1,212 @@
 \\ ---------------- GLOBAL CODE ----------------
 
 GlobalCode:
-    GlobalCodeLine ( Newline_ GlobalCodeLine? )*
+    (
+        GlobalCodeItem
+        (
+            "\n"_
+            GlobalCodeItem
+        )*
+    )
 
-GlobalCodeLine:
-    GlobalCodeStatement
-
-GlobalCodeStatement(hidden):
-    Import
-    Pass
-    SpaceDefinition
+GlobalCodeItem(hidden):
+    SpaceBodyItem
+    StatementImport
+    NonCodeBlock
 
 \\ ---------------- PASS ----------------
 
-Pass:
+StatementPass:
     "pass"_
 
 \\ ---------------- IMPORT ----------------
 
-Import:
-    "import"_ ( "."_ Identifier )*->ImportModifiers Whitespace_ StringLiteral->ImportPath
+StatementImport:
+    (
+        "import"_
+        ImportSpecifiers
+        Whitespace_
+        String{ onFail: fail("Expected import path") }
+    )
 
-\\ ---------------- SPACE DEFINITION ----------------
+ImportSpecifiers:
+    (
+        "."_
+        ImportSpecifier{ onFail: fail("Expected import specifier") }
+    )*
 
-SpaceDefinition:
-    SpaceHeader Newline_ IndentationIncrease_ SpaceBody IndentationDecrease_
+ImportSpecifier(hidden):
+    "linux"
+    "windows"
+    "macos"
+    "defer"
+
+\\ ---------------- SPACE ----------------
+
+StatementSpace:
+    SpaceHeader SpaceBody
 
 SpaceHeader:
-    "space"_ Whitespace_ Identifier ":"_
+    (
+        "space"_
+        Whitespace_
+        SpaceName{ onFail: fail("Expected space name") }
+        Whitespace?_
+        ":"_{ onFail: fail("Expected colon") }
+    )
+
+SpaceName:
+    Identifier
 
 SpaceBody:
-    SpaceBodyLine ( Newline_ IndentationCurrent_ SpaceBodyLine )*
+    Whitespace?_ SpaceBodyItem
+    (
+        NonCodeBlock?
+        "\n"_ IndentationIncrease_{ onFail: fail("Expected indentation increase") }
+        SpaceBodyItem{ onFail: fail("Expected at least one space body item") }
+        (
+            NonCodeBlock?
+            "\n"_ Indentation_
+            SpaceBodyItem{ onFail: fail("Expected space body item after correct indentation")}
+        )*
+        IndentationDecrease_
+    )
 
-SpaceBodyLine:
-    SpaceBodyStatement
+SpaceBodyItem(hidden):
+    StatementPass
+    StatementSpace
+    StatementFunctionDeclDef
 
-SpaceBodyStatement(hidden):
-    Pass
-    SpaceDefinition
+\\ ---------------- FUNCTIONS ----------------
+
+StatementFunctionDeclDef:
+    (
+        "fn"_ Whitespace?_
+        FunctionReturnType
+        Whitespace?_
+        FunctionName{ onFail: fail("Expected function name") }
+        FunctionParameters
+        Whitespace?_
+        FunctionSpecifiers
+        Whitespace?_
+        [
+            "..."_->Declaration
+        ]
+    )
+
+FunctionName:
+    Identifier
+
+FunctionReturnType:
+    (
+        "<"_ Whitespace?_
+        Datatype?
+        Whitespace?_ ">"_{ onFail: fail("Expected closing angle bracket") }
+    )
+
+FunctionParameters:
+    (
+        "("_ Whitespace?_
+        (
+            FunctionParameter
+            (
+                Whitespace?_ ","_
+                Whitespace?_
+                FunctionParameter{ onFail: fail("Expected function parameter after comma") }
+            )*
+        )?
+        Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis") }
+    )
+
+FunctionParameter:
+    ( Datatype Whitespace?_ Identifier{ onFail: fail("Expected function parameter name") } )->Normal
+
+FunctionSpecifiers:
+    ( FunctionSpecifier ( Whitespace?_ FunctionSpecifier )* )?
+
+FunctionSpecifier:
+    "!"_->RequiresPredeclaration
+    "nodiscard"_->NoDiscard
+
+\\ ---------------- DATATYPES ----------------
+
+Datatype:
+    Identifier->Named
+    ( "?"_ Identifier{ onFail: fail("Expected function blueprint parameter name") } )->Blueprint
 
 \\ ---------------- INDENTATION ----------------
 
-IndentationCurrent:
+Indentation:
     :IndentationStack.0:
 
 IndentationIncrease:
-    ( IndentationCurrent Whitespace ){ onMatch: push(_, IndentationStack) }
+    ( Indentation Whitespace ){ onMatch: push(_, IndentationStack) }
 
 IndentationDecrease:
-    ""{ onMatch: pop(IndentationStack) }
-
-\\ ---------------- IDENTIFIER ----------------
-
-Identifier(fuse):
-    IdentifierCharFirst IdentifierCharRemaining*
-
-IdentifierCharFirst(hidden):
-    'az'
-    'AZ'
-    "_"
-
-IdentifierCharRemaining(hidden):
-    IdentifierCharFirst
-    '09'
-
-\\ ---------------- LITERALS ----------------
-
-StringLiteral(fuse):
-    "\""_ StringLiteralChar* "\""_
-
-StringLiteralChar(hidden):
-    "\\\\"
-    "\\\""
-    "\""!
+    ""_{ onMatch: pop(IndentationStack) }
 
 \\ ---------------- COMMENTS ----------------
 
-CommentChain(hidden):
-    Comment ( Newline_ Comment )*
-
 Comment:
-    CommentSingleLine
-    CommentMultiLine
+    Whitespace?_ [ CommentSingleLine CommentMultiLine ]
 
 CommentSingleLine(hidden fuse):
-    Whitespace?_ "\\\\" Newline!*
+    "\\\\" Newline!*
 
 CommentMultiLine(hidden fuse):
-    Whitespace?_ "\\*" "*\\"!* "*\\"
+    "\\*" "*\\"!* "*\\"
+
+\\ ---------------- STRINGS ----------------
+
+String(fuse):
+    (
+        "\""_
+        StringChar*
+        "\""_{ onFail: fail("Expected closing quote") }
+    )
+
+StringChar(hidden):
+    EscapeSequence
+    "\""!
+
+\\ ---------------- IDENTIFIERS ----------------
+
+Identifier(fuse):
+    [ AlphaChar "_" ] [ AlnumChar "_" ]*
 
 \\ ---------------- MISCELLANEOUS ----------------
 
-AlphaChar(hidden):
-    'az'
-    'AZ'
+NonCodeBlock(hidden):
+    (
+        [ EmptyLine_ Comment ]
+        (
+            "\n"_
+            [ EmptyLine_ Comment ]
+        )*
+    )
+    
 
-NumChar(hidden):
-    '09'
+EmptyLine:
+    Whitespace?_ Newline~_
 
-AlnumChar(hidden):
-    AlphaChar
-    NumChar
+EscapeSequence(fuse):
+    (
+        "\\"_
+        [
+            "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\""
+            (
+                "x" (HexChar HexChar){ onFail: fail("Expected hexadecimal escape sequence") }
+            )
+        ]{ onFail: fail("Expected escape sequence") }
+    )
 
-Newline(hidden):
-    "\n"
+AlphaChar(hidden): [ 'az' 'AZ' ]
+AlnumChar(hidden): [ AlphaChar DecChar ]
 
-Whitespace(fuse):
-    [ " " "\t" ]+
+BinChar(hidden): '01'
+OctChar(hidden): '07'
+DecChar(hidden): '09'
+HexChar(hidden): [ '09' 'af' 'AF' ]
+
+Newline: "\n"
+Whitespace(fuse): [ " " "\t" ]+
