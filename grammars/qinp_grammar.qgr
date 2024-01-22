@@ -18,6 +18,7 @@ CodeItem(hidden):
     StatementSpace
     StatementReturn
     StatementWhile
+    StatementDoWhile
     StatementIfElifElse
     StatementFunctionDeclDef
     StatementVariableDeclDef
@@ -100,6 +101,20 @@ StatementWhile:
         Expression{ onFail: fail("Expected condition for while loop") }
         Whitespace?_ ":"_{ onFail: fail("Expected colon") }
         CodeBlock
+    )
+
+\\ ---------------- DO WHILE ----------------
+
+StatementDoWhile:
+    (
+        "do"_
+        Whitespace?_ ":"_{ onFail: fail("Expected colon") }
+        CodeBlock
+        Whitespace?_ "\n"_{ onFail: fail("Expected newline after do-while loop body") }
+        Indentation_{ onFail: fail("Expected indentation") }
+        "while"_
+        Whitespace_
+        Expression{ onFail: fail("Expected condition for do-while loop") }
     )
 
 \\ ---------------- IF/ELIF/ELSE ----------------
