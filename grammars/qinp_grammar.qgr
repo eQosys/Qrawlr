@@ -3,18 +3,39 @@
 GlobalCode:
     (
         ( NonCodeBlock "\n" )?
-        GlobalCodeItem
+        CodeItem
         (
             NonCodeBlock?
             "\n"_
-            GlobalCodeItem
+            CodeItem
         )*
     )
 
-GlobalCodeItem(hidden):
-    StatementImport
+CodeItem(hidden):
+    StatementPass
     StatementDefer
-    SpaceBodyItem
+    StatementImport
+    StatementSpace
+    StatementReturn
+    StatementWhile
+    StatementIfElifElse
+    StatementFunctionDeclDef
+    StatementVariableDeclDef
+    Expression
+
+CodeBlock:
+    Whitespace?_ CodeItem
+    (
+        NonCodeBlock?
+        "\n"_ IndentationIncrease_{ onFail: fail("Expected indentation increase") }
+        CodeItem{ onFail: fail("Expected at least one body item") }
+        (
+            NonCodeBlock?
+            "\n"_ Indentation_
+            CodeItem{ onFail: fail("Expected body item after correct indentation")}
+        )*
+        IndentationDecrease_
+    )
 
 \\ ---------------- PASS ----------------
 
@@ -51,7 +72,7 @@ ImportSpecifier(hidden):
 \\ ---------------- SPACE ----------------
 
 StatementSpace:
-    SpaceHeader SpaceBody
+    SpaceHeader CodeBlock
 
 SpaceHeader:
     (
@@ -65,32 +86,62 @@ SpaceHeader:
 SpaceName:
     Identifier
 
-SpaceBody:
-    Whitespace?_ SpaceBodyItem
-    (
-        NonCodeBlock?
-        "\n"_ IndentationIncrease_{ onFail: fail("Expected indentation increase") }
-        SpaceBodyItem{ onFail: fail("Expected at least one space body item") }
-        (
-            NonCodeBlock?
-            "\n"_ Indentation_
-            SpaceBodyItem{ onFail: fail("Expected space body item after correct indentation")}
-        )*
-        IndentationDecrease_
-    )
-
-SpaceBodyItem(hidden):
-    StatementPass
-    StatementSpace
-    StatementReturn
-    StatementFunctionDeclDef
-    StatementVariableDeclDef
-    Expression
-
 \\ ---------------- RETURN ----------------
 
 StatementReturn:
     "return"_ Whitespace?_ Expression
+
+\\ ---------------- WHILE ----------------
+
+StatementWhile:
+    (
+        "while"_
+        Whitespace?_
+        Expression{ onFail: fail("Expected condition for while loop") }
+        Whitespace?_ ":"_{ onFail: fail("Expected colon") }
+        CodeBlock
+    )
+
+\\ ---------------- IF/ELIF/ELSE ----------------
+
+StatementIfElifElse:
+    (
+        StatementIf
+        (
+            Whitespace?_
+            StatementElif
+        )*
+        (
+            Whitespace?_
+            StatementElse
+        )?
+    
+    )
+
+StatementIf:
+    (
+        "if"_
+        Whitespace?_
+        Expression{ onFail: fail("Expected condition for if statement") }
+        Whitespace?_ ":"_{ onFail: fail("Expected colon") }
+        CodeBlock
+    )
+
+StatementElif:
+    (
+        "elif"_
+        Whitespace?_
+        Expression{ onFail: fail("Expected condition for elif statement") }
+        Whitespace?_ ":"_{ onFail: fail("Expected colon") }
+        CodeBlock
+    )
+
+StatementElse:
+    (
+        "else"_
+        Whitespace?_ ":"_{ onFail: fail("Expected colon") }
+        CodeBlock
+    )
 
 \\ ---------------- FUNCTIONS ----------------
 
@@ -147,24 +198,7 @@ FunctionDeclaration:
     Whitespace?_ "..."_
 
 FunctionDefinition:
-    Whitespace?_ ":"_ FunctionBody{ onFail: fail("Expected function body")}
-
-FunctionBody:
-    Whitespace?_ FunctionBodyItem
-    (
-        NonCodeBlock?
-        "\n"_ IndentationIncrease_{ onFail: fail("Expected indentation increase") }
-        FunctionBodyItem{ onFail: fail("Expected at least one function body item") }
-        (
-            NonCodeBlock?
-            "\n"_ Indentation_
-            FunctionBodyItem{ onFail: fail("Expected function body item after correct indentation")}
-        )*
-        IndentationDecrease_
-    )
-
-FunctionBodyItem(hidden):
-    SpaceBodyItem
+    Whitespace?_ ":"_ CodeBlock{ onFail: fail("Expected function body")}
 
 \\ ---------------- VARIABLES ----------------
 
@@ -396,11 +430,16 @@ ExprPrec13:
         (
             Whitespace?_
             ExprPrec13Operator
-        )?
+        )*
     )
 
 ExprPrec13Operator:
-    [ "++" "--" "." "->" ExprOpFunctionCall ExprOpSubscript]
+    [
+        "++" "--"
+        ( [ "." "->" ] Identifier{ onFail: fail("Expected identifier after member access operator")} )
+        ExprOpFunctionCall
+        ExprOpSubscript
+    ]
 
 ExprOpFunctionCall:
     (
