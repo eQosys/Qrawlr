@@ -123,11 +123,11 @@ StatementIfElifElse:
     (
         StatementIf
         (
-            Whitespace?_
+            "\n"_ Indentation_
             StatementElif
         )*
         (
-            Whitespace?_
+            "\n"_ Indentation_
             StatementElse
         )?
     
