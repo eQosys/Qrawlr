@@ -2,22 +2,29 @@
 
 GlobalCode:
     (
+        ( NonCodeBlock "\n" )?
         GlobalCodeItem
         (
+            NonCodeBlock?
             "\n"_
             GlobalCodeItem
         )*
     )
 
 GlobalCodeItem(hidden):
-    SpaceBodyItem
     StatementImport
-    NonCodeBlock
+    StatementDefer
+    SpaceBodyItem
 
 \\ ---------------- PASS ----------------
 
 StatementPass:
     "pass"_
+
+\\ ---------------- DEFER ----------------
+
+StatementDefer:
+    "defer"_
 
 \\ ---------------- IMPORT ----------------
 
@@ -75,11 +82,22 @@ SpaceBody:
 SpaceBodyItem(hidden):
     StatementPass
     StatementSpace
+    StatementReturn
     StatementFunctionDeclDef
+    StatementVariableDeclDef
+    Expression
+
+\\ ---------------- RETURN ----------------
+
+StatementReturn:
+    "return"_ Whitespace?_ Expression
 
 \\ ---------------- FUNCTIONS ----------------
 
 StatementFunctionDeclDef:
+    FunctionHeader [ FunctionDeclaration FunctionDefinition ]
+
+FunctionHeader:
     (
         "fn"_ Whitespace?_
         FunctionReturnType
@@ -88,10 +106,6 @@ StatementFunctionDeclDef:
         FunctionParameters
         Whitespace?_
         FunctionSpecifiers
-        Whitespace?_
-        [
-            "..."_->Declaration
-        ]
     )
 
 FunctionName:
@@ -103,6 +117,7 @@ FunctionReturnType:
         Datatype?
         Whitespace?_ ">"_{ onFail: fail("Expected closing angle bracket") }
     )
+    ""_
 
 FunctionParameters:
     (
@@ -128,6 +143,56 @@ FunctionSpecifier:
     "!"_->RequiresPredeclaration
     "nodiscard"_->NoDiscard
 
+FunctionDeclaration:
+    Whitespace?_ "..."_
+
+FunctionDefinition:
+    Whitespace?_ ":"_ FunctionBody{ onFail: fail("Expected function body")}
+
+FunctionBody:
+    Whitespace?_ FunctionBodyItem
+    (
+        NonCodeBlock?
+        "\n"_ IndentationIncrease_{ onFail: fail("Expected indentation increase") }
+        FunctionBodyItem{ onFail: fail("Expected at least one function body item") }
+        (
+            NonCodeBlock?
+            "\n"_ Indentation_
+            FunctionBodyItem{ onFail: fail("Expected function body item after correct indentation")}
+        )*
+        IndentationDecrease_
+    )
+
+FunctionBodyItem(hidden):
+    SpaceBodyItem
+
+\\ ---------------- VARIABLES ----------------
+
+StatementVariableDeclDef:
+    VariableDeclarator VariableDatatype Whitespace?_ VariableName{ onFail: fail("Expected variable name") } VariableInitializer
+
+VariableDeclarator:
+    [ "var" "const" ]
+
+VariableDatatype:
+    (
+        "<"_ Whitespace?_
+        Datatype?
+        Whitespace?_ ">"_{ onFail: fail("Expected closing angle bracket") }
+    )
+    ""_
+
+VariableName:
+    Identifier
+
+VariableInitializer:
+    (
+        Whitespace?_
+        "="_
+        Whitespace?_
+        Expression{ onFail: fail("Expected variable initializer value") }
+    )?
+
 \\ ---------------- DATATYPES ----------------
 
 Datatype:
@@ -146,6 +211,222 @@ Datatype:
         ("const"_->Const)?
         )*
     )->Named
+
+\\ ---------------- EXPRESSIONS ----------------
+
+Expression:
+    ExprPrec1
+
+ExprPrec1:
+    (
+        ExprPrec2
+        (
+            Whitespace?_
+            ExprPrec1Operator
+            Whitespace?_
+            ExprPrec2{ onFail: fail("Expected expression after operator [lvl-01]") }
+        )*
+    )
+
+ExprPrec1Operator:
+    [ "=" "+=" "-=" "*=" "/=" "%=" "&=" "|=" "^=" "<<=" ">>=" ]
+
+ExprPrec2:
+    (
+        ExprPrec3
+        (
+            Whitespace?_
+            ExprPrec2Operator
+            Whitespace?_
+            ExprPrec3{ onFail: fail("Expected expression after operator [lvl-02]") }
+        )*
+    )
+
+ExprPrec2Operator:
+    [ "||" ]
+
+ExprPrec3:
+    (
+        ExprPrec4
+        (
+            Whitespace?_
+            ExprPrec3Operator
+            Whitespace?_
+            ExprPrec4{ onFail: fail("Expected expression after operator [lvl-03]") }
+        )*
+    )
+
+ExprPrec3Operator:
+    [ "&&" ]
+
+ExprPrec4:
+    (
+        ExprPrec5
+        (
+            Whitespace?_
+            ExprPrec4Operator
+            Whitespace?_
+            ExprPrec5{ onFail: fail("Expected expression after operator [lvl-04]") }
+        )*
+    )
+
+ExprPrec4Operator:
+    [ "|" ]
+
+ExprPrec5:
+    (
+        ExprPrec6
+        (
+            Whitespace?_
+            ExprPrec5Operator
+            Whitespace?_
+            ExprPrec6{ onFail: fail("Expected expression after operato [lvl-05]r") }
+        )*
+    )
+
+ExprPrec5Operator:
+    [ "^" ]
+
+ExprPrec6:
+    (
+        ExprPrec7
+        (
+            Whitespace?_
+            ExprPrec6Operator
+            Whitespace?_
+            ExprPrec7{ onFail: fail("Expected expression after operator [lvl-06]") }
+        )*
+    )
+
+ExprPrec6Operator:
+    [ "&" ]
+
+ExprPrec7:
+    (
+        ExprPrec8
+        (
+            Whitespace?_
+            ExprPrec7Operator
+            Whitespace?_
+            ExprPrec8{ onFail: fail("Expected expression after operator [lvl-07]") }
+        )*
+    )
+
+ExprPrec7Operator:
+    [ "==" "!=" ]
+
+ExprPrec8:
+    (
+        ExprPrec9
+        (
+            Whitespace?_
+            ExprPrec8Operator
+            Whitespace?_
+            ExprPrec9{ onFail: fail("Expected expression after operator [lvl-08]") }
+        )*
+    )
+
+ExprPrec8Operator:
+    [ "<=" "<" ">=" ">" ]
+
+ExprPrec9:
+    (
+        ExprPrec10
+        (
+            Whitespace?_
+            ExprPrec9Operator
+            Whitespace?_
+            ExprPrec10{ onFail: fail("Expected expression after operator [lvl-09]") }
+        )*
+    )
+
+ExprPrec9Operator:
+    [ "<<" ">>" ]
+
+ExprPrec10:
+    (
+        ExprPrec11
+        (
+            Whitespace?_
+            ExprPrec10Operator
+            Whitespace?_
+            ExprPrec11{ onFail: fail("Expected expression after operator [lvl-10]") }
+        )*
+    )
+
+ExprPrec10Operator:
+    [ "+" "-" ]
+
+ExprPrec11:
+    (
+        ExprPrec12
+        (
+            Whitespace?_
+            ExprPrec11Operator
+            Whitespace?_
+            ExprPrec12{ onFail: fail("Expected expression after operator [lvl-11]") }
+        )*
+    )
+
+ExprPrec11Operator:
+    [ "*" "/" "%" ]
+
+ExprPrec12:
+    (
+        (
+            Whitespace?_
+            ExprPrec12Operator
+        )*
+        ExprPrec13
+    )
+
+ExprPrec12Operator:
+    [ "++" "--" "+" "-" "!" "~" "*" "&" ExprOpTypeCast ]
+
+ExprOpTypeCast:
+    (
+        "("_ Whitespace?_
+        Datatype
+        Whitespace?_ ")"_
+    )
+
+ExprPrec13:
+    (
+        ExprPrec14
+        (
+            Whitespace?_
+            ExprPrec13Operator
+        )?
+    )
+
+ExprPrec13Operator:
+    [ "++" "--" "." "->" ExprOpFunctionCall ExprOpSubscript]
+
+ExprOpFunctionCall:
+    (
+        "("_ Whitespace?_
+        (
+            Expression
+            (
+                Whitespace?_ ","_
+                Whitespace?_
+                Expression{ onFail: fail("Expected function call argument after comma") }
+            )*
+        )?
+        Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for function call") }
+    )
+
+ExprOpSubscript:
+    (
+        "["_ Whitespace?_
+        Expression{ onFail: fail("Expected subscript index") }
+        Whitespace?_ "]"_{ onFail: fail("Expected closing bracket for subscript") }
+    )
+
+ExprPrec14:
+    "("_ Whitespace?_ Expression Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for atom")}
+    Identifier
+    Literal
 
 \\ ---------------- INDENTATION ----------------
 
@@ -169,13 +450,25 @@ CommentSingleLine(hidden fuse):
 CommentMultiLine(hidden fuse):
     "\\*" "*\\"!* "*\\"
 
+\\ ---------------- LITERALS ----------------
+
+Literal:
+    LiteralInteger
+    LiteralString
+
+LiteralInteger(fuse):
+    '09'+
+
+LiteralString:
+    String
+
 \\ ---------------- STRINGS ----------------
 
 String(fuse):
     (
         "\""_
         StringChar*
-        "\""_{ onFail: fail("Expected closing quote") }
+        "\""_{ onFail: fail("Expected closing quote for string literal") }
     )
 
 StringChar(hidden):
@@ -208,9 +501,9 @@ EscapeSequence(fuse):
         [
             "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\""
             (
-                "x" (HexChar HexChar){ onFail: fail("Expected hexadecimal escape sequence") }
+                "x" (HexChar HexChar){ onFail: fail("Expected hexadecimal escape sequence after '\\x'") }
             )
-        ]{ onFail: fail("Expected escape sequence") }
+        ]{ onFail: fail("Expected escape sequence after '\\'") }
     )
 
 AlphaChar(hidden): [ 'az' 'AZ' ]
