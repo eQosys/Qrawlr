@@ -550,7 +550,7 @@ ExprPrec11:
         )*
     )
 
-ExprPrec12Operator: [ "." "++" "--" "+" "-" "!" "~" "*" "&" ExprOpTypeCast ]
+ExprPrec12Operator: [ "." "++" "--" "+" "-" "!" "~" "*" "&" "sizeof" ExprOpTypeCast ]
 ExprPrec12:
     (
         (
