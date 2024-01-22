@@ -54,7 +54,7 @@ StatementImport:
         "import"_
         ImportSpecifiers
         Whitespace_
-        String{ onFail: fail("Expected import path") }
+        LiteralString{ onFail: fail("Expected import path") }
     )
 
 ImportSpecifiers:
@@ -262,9 +262,9 @@ ExprPrec1:
         )*
     )
 
-ExprPrec1Operator:
-    [ "=" "+=" "-=" "*=" "/=" "%=" "&=" "|=" "^=" "<<=" ">>=" ]
+ExprPrec1Operator: [ "=" "+=" "-=" "*=" "/=" "%=" "&=" "|=" "^=" "<<=" ">>=" ]
 
+ExprPrec2Operator: [ "||" ]
 ExprPrec2:
     (
         ExprPrec3
@@ -276,9 +276,7 @@ ExprPrec2:
         )*
     )
 
-ExprPrec2Operator:
-    [ "||" ]
-
+ExprPrec3Operator: [ "&&" ]
 ExprPrec3:
     (
         ExprPrec4
@@ -290,9 +288,7 @@ ExprPrec3:
         )*
     )
 
-ExprPrec3Operator:
-    [ "&&" ]
-
+ExprPrec4Operator: [ "|" ]
 ExprPrec4:
     (
         ExprPrec5
@@ -304,9 +300,7 @@ ExprPrec4:
         )*
     )
 
-ExprPrec4Operator:
-    [ "|" ]
-
+ExprPrec5Operator: [ "^" ]
 ExprPrec5:
     (
         ExprPrec6
@@ -314,13 +308,11 @@ ExprPrec5:
             Whitespace?_
             ExprPrec5Operator
             Whitespace?_
-            ExprPrec6{ onFail: fail("Expected expression after operato [lvl-05]r") }
+            ExprPrec6{ onFail: fail("Expected expression after operato [lvl-05]") }
         )*
     )
 
-ExprPrec5Operator:
-    [ "^" ]
-
+ExprPrec6Operator: [ "&" ]
 ExprPrec6:
     (
         ExprPrec7
@@ -332,9 +324,8 @@ ExprPrec6:
         )*
     )
 
-ExprPrec6Operator:
-    [ "&" ]
 
+ExprPrec7Operator: [ "==" "!=" ]
 ExprPrec7:
     (
         ExprPrec8
@@ -346,9 +337,7 @@ ExprPrec7:
         )*
     )
 
-ExprPrec7Operator:
-    [ "==" "!=" ]
-
+ExprPrec8Operator: [ "<=" "<" ">=" ">" ]
 ExprPrec8:
     (
         ExprPrec9
@@ -360,9 +349,7 @@ ExprPrec8:
         )*
     )
 
-ExprPrec8Operator:
-    [ "<=" "<" ">=" ">" ]
-
+ExprPrec9Operator: [ "<<" ">>" ]
 ExprPrec9:
     (
         ExprPrec10
@@ -374,9 +361,7 @@ ExprPrec9:
         )*
     )
 
-ExprPrec9Operator:
-    [ "<<" ">>" ]
-
+ExprPrec10Operator: [ "+" "-" ]
 ExprPrec10:
     (
         ExprPrec11
@@ -388,9 +373,7 @@ ExprPrec10:
         )*
     )
 
-ExprPrec10Operator:
-    [ "+" "-" ]
-
+ExprPrec11Operator: [ "*" "/" "%" ]
 ExprPrec11:
     (
         ExprPrec12
@@ -402,9 +385,7 @@ ExprPrec11:
         )*
     )
 
-ExprPrec11Operator:
-    [ "*" "/" "%" ]
-
+ExprPrec12Operator: [ "++" "--" "+" "-" "!" "~" "*" "&" ExprOpTypeCast ]
 ExprPrec12:
     (
         (
@@ -413,9 +394,6 @@ ExprPrec12:
         )*
         ExprPrec13
     )
-
-ExprPrec12Operator:
-    [ "++" "--" "+" "-" "!" "~" "*" "&" ExprOpTypeCast ]
 
 ExprOpTypeCast:
     (
@@ -444,6 +422,7 @@ ExprPrec13Operator:
 ExprOpFunctionCall:
     (
         "("_ Whitespace?_
+        FunctionCallBlueprintParameters
         (
             Expression
             (
@@ -454,6 +433,24 @@ ExprOpFunctionCall:
         )?
         Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for function call") }
     )
+
+FunctionCallBlueprintParameters:
+    (
+        "{"_ Whitespace?_
+        (
+            FunctionCallBlueprintParameter
+            (
+                Whitespace?_ ","_
+                Whitespace?_
+                FunctionCallBlueprintParameter{ onFail: fail("Expected function call blueprint parameter after comma") }
+            )*
+        )?
+        "}"_{ onFail: fail("Expected closing brace for function blueprint parameters") }
+    )
+    ""_
+
+FunctionCallBlueprintParameter:
+    Datatype
 
 ExprOpSubscript:
     (
@@ -498,12 +495,7 @@ Literal:
 LiteralInteger(fuse):
     '09'+
 
-LiteralString:
-    String
-
-\\ ---------------- STRINGS ----------------
-
-String(fuse):
+LiteralString(fuse):
     (
         "\""_
         StringChar*
@@ -529,10 +521,6 @@ NonCodeBlock(hidden):
             [ EmptyLine_ Comment ]
         )*
     )
-    
-
-EmptyLine:
-    Whitespace?_ Newline~_
 
 EscapeSequence(fuse):
     (
@@ -544,6 +532,8 @@ EscapeSequence(fuse):
             )
         ]{ onFail: fail("Expected escape sequence after '\\'") }
     )
+
+EmptyLine: Whitespace?_ Newline~_
 
 AlphaChar(hidden): [ 'az' 'AZ' ]
 AlnumChar(hidden): [ AlphaChar DecChar ]
