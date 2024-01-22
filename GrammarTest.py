@@ -102,16 +102,16 @@ def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None,
     if do_write_tree:
         write_tree_graphviz(tree, filename, verbose)
 
-    return tree
+    return result
 
 def test_algebra():
     filename = "test_files/algebra_expression.txt"
     with open(filename, "r") as f:
         expression = f.read().strip()
 
-    tree = run_test("grammars/algebra_grammar.qgr", "Expression", expression, filename, verbose = False)
+    result = run_test("grammars/algebra_grammar.qgr", "Expression", expression, filename, verbose = False)
 
-    result = evaluate_expression(tree)
+    result = evaluate_expression(result.tree)
 
     print(f"  INFO: result = {result}")
     print(f"        reference = {eval(expression.replace('/', '//'))}")
@@ -137,17 +137,33 @@ def test_qism():
 
     run_test("grammars/qism_grammar.qgr", "Code", text, filename)
 
-def test_qinp():
-    filename = "test_files/push_pop_test.qnp"
-    with open(filename, "r") as f:
-        text = f.read()
+QINP_DIR = "../QINP/stdlib"
 
-    run_test("grammars/qinp_grammar.qgr", "GlobalCode", text, filename, verbose = True)
+def test_qinp(test_all = False):
+    if test_all:
+        for root, dirs, files in os.walk(QINP_DIR):
+            for name in files:
+                if name.endswith(".qnp"):
+                    filename = os.path.join(root, name)
+                    with open(filename, "r") as f:
+                        text = f.read()
+
+                    result = run_test("grammars/qinp_grammar.qgr", "GlobalCode", text, filename, verbose=True, do_write_tree=False, do_render_tree=False)
+
+                    if result.farthest_match_position.index < len(text):
+                        exit(1)
+                    
+    else:
+        filename = "test_files/push_pop_test.qnp"
+        with open(filename, "r") as f:
+            text = f.read()
+
+        run_test("grammars/qinp_grammar.qgr", "GlobalCode", text, filename, verbose = True)
 
 if __name__ == "__main__":
     try:
         #test_qism()
-        test_qinp()
+        test_qinp(True)
         #test_algebra()
         #test_grammar(True)
     except GrammarException as e:

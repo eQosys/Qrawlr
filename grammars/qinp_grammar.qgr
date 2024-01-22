@@ -17,11 +17,15 @@ CodeItem(hidden):
     StatementImport
     StatementSpace
     StatementReturn
+    StatementDefine
     StatementWhile
     StatementDoWhile
     StatementIfElifElse
+    StatementPackDeclDef
+    StatementEnumDeclDef
     StatementFunctionDeclDef
     StatementVariableDeclDef
+    StatementInlineAssembly
     Expression
 
 CodeBlock:
@@ -92,6 +96,33 @@ SpaceName:
 StatementReturn:
     "return"_ Whitespace?_ Expression
 
+\\ ---------------- DEFINE ----------------
+
+StatementDefine:
+    (
+        "define"_ Whitespace_
+        Identifier{ onFail: fail("Expected macro name") }
+        MacroParameters
+        Whitespace?_
+        CodeItem{ onFail: fail("Expected macro body") }
+    )
+
+MacroParameters:
+    (
+        Whitespace?_ "("_
+        (
+            Whitespace?_
+            Identifier{ onFail: fail("Expected macro parameter name") }
+            (
+                Whitespace?_ ","_
+                Whitespace?_
+                Identifier{ onFail: fail("Expected macro parameter after comma") }
+            )*
+        )
+        Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for macro parameter list") }
+    )
+    ""_
+
 \\ ---------------- WHILE ----------------
 
 StatementWhile:
@@ -158,6 +189,82 @@ StatementElse:
         CodeBlock
     )
 
+\\ ---------------- PACKS ----------------
+
+StatementPackDeclDef:
+    PackHeader [ PackDeclaration PackDefinition ]
+
+PackHeader:
+    (
+        "pack"_ Whitespace_
+        PackName{ onFail: fail("Expected pack name") }
+    )
+
+PackName:
+    SymbolReference
+
+PackDeclaration:
+    Whitespace?_ "..."_
+
+PackDefinition:
+    Whitespace?_ ":"_ CodeBlock{ onFail: fail("Expected pack body")}
+
+\\ ---------------- ENUMS ----------------
+
+StatementEnumDeclDef:
+    EnumHeader [ EnumDeclaration EnumDefinition ]
+
+EnumHeader:
+    (
+        "enum"_ Whitespace_
+        EnumName{ onFail: fail("Expected enum name") }
+    )
+
+EnumName:
+    SymbolReference
+
+EnumDeclaration:
+    Whitespace?_ "..."_
+
+EnumDefinition:
+    Whitespace?_ ":"_ EnumMemberList{ onFail: fail("Expected enum body")}
+
+EnumMemberList:
+    Whitespace?_ EnumMemberLine
+    (
+        NonCodeBlock?
+        "\n"_ IndentationIncrease_{ onFail: fail("Expected indentation increase") }
+        EnumMemberLine{ onFail: fail("Expected at least one enum member") }
+        (
+            NonCodeBlock?
+            "\n"_ Indentation_
+            EnumMemberLine{ onFail: fail("Expected enum member after correct indentation")}
+        )*
+        IndentationDecrease_
+    )
+
+EnumMemberLine:
+    (
+        EnumMemberDefinition
+        (
+            Whitespace?_ ","_
+            Whitespace?_
+            EnumMemberDefinition
+        )*
+        (Whitespace?_ ","_)?
+    )
+
+EnumMemberDefinition:
+    (
+        Identifier
+        Whitespace?_
+        (
+            "="_
+            Whitespace?_
+            Expression{ onFail: fail("Expected enum member value") }
+        )?
+    )
+
 \\ ---------------- FUNCTIONS ----------------
 
 StatementFunctionDeclDef:
@@ -175,7 +282,7 @@ FunctionHeader:
     )
 
 FunctionName:
-    Identifier
+    SymbolReference
 
 FunctionReturnType:
     (
@@ -201,6 +308,7 @@ FunctionParameters:
 
 FunctionParameter:
     ( Datatype Whitespace?_ Identifier{ onFail: fail("Expected function parameter name") } )->Normal
+    "..."_->Variadic
 
 FunctionSpecifiers:
     ( FunctionSpecifier ( Whitespace?_ FunctionSpecifier )* )?
@@ -221,7 +329,7 @@ StatementVariableDeclDef:
     VariableDeclarator VariableDatatype Whitespace?_ VariableName{ onFail: fail("Expected variable name") } VariableInitializer
 
 VariableDeclarator:
-    [ "var" "const" ]
+    ("static" Whitespace_)? [ "var" "const" ]
 
 VariableDatatype:
     (
@@ -242,6 +350,31 @@ VariableInitializer:
         Expression{ onFail: fail("Expected variable initializer value") }
     )?
 
+\\ ---------------- INLINE ASSEMBLY ----------------
+
+StatementInlineAssembly:
+    InlineAsmHeader InlineAsmBody
+
+InlineAsmHeader:
+    (
+        [ "asm" "assembly" ]_
+        Whitespace?_ ":"_{ onFail: fail("Expected colon") }
+    )
+
+InlineAsmBody:
+    Whitespace?_ LiteralString
+    (
+        NonCodeBlock?
+        "\n"_ IndentationIncrease_{ onFail: fail("Expected indentation increase") }
+        LiteralString{ onFail: fail("Expected at least one assembly line") }
+        (
+            NonCodeBlock?
+            "\n"_ Indentation_
+            LiteralString{ onFail: fail("Expected assembly line after correct indentation")}
+        )*
+        IndentationDecrease_
+    )
+
 \\ ---------------- DATATYPES ----------------
 
 Datatype:
@@ -258,6 +391,16 @@ Datatype:
             "*"_->Pointer
             Whitespace?_
         ("const"_->Const)?
+        )*
+        (
+            Whitespace?_
+            "["_ Whitespace?_
+            (
+                Expression{ onFail: fail("Expected array size") }
+                Whitespace?_
+                "]"_{ onFail: fail("Expected closing bracket") }
+            )
+            Whitespace?_
         )*
     )->Named
 
@@ -277,7 +420,7 @@ ExprPrec1:
         )*
     )
 
-ExprPrec1Operator: [ "=" "+=" "-=" "*=" "/=" "%=" "&=" "|=" "^=" "<<=" ">>=" ]
+ExprPrec1Operator: [ "=" "+=" "-=" "*=" "/=" "%=" "&=" "|=" "^=" "<<=" ">>=" TernaryOperator ]
 
 ExprPrec2Operator: [ "||" ]
 ExprPrec2:
@@ -289,6 +432,13 @@ ExprPrec2:
             Whitespace?_
             ExprPrec3{ onFail: fail("Expected expression after operator [lvl-02]") }
         )*
+    )
+
+TernaryOperator:
+    (
+        "?"_ Whitespace?_
+        Expression{ onFail: fail("Expected option 'true' for ternary operator") }
+        Whitespace?_ ":"_{ onFail: fail("Expected colon for ternary operator") }
     )
 
 ExprPrec3Operator: [ "&&" ]
@@ -303,7 +453,7 @@ ExprPrec3:
         )*
     )
 
-ExprPrec4Operator: [ "|" ]
+ExprPrec4Operator: [ ( "|" "|"!~_ ) ]
 ExprPrec4:
     (
         ExprPrec5
@@ -327,7 +477,7 @@ ExprPrec5:
         )*
     )
 
-ExprPrec6Operator: [ "&" ]
+ExprPrec6Operator: [ ( "&" "&"!~_ ) ]
 ExprPrec6:
     (
         ExprPrec7
@@ -364,7 +514,7 @@ ExprPrec8:
         )*
     )
 
-ExprPrec9Operator: [ "<<" ">>" ]
+ExprPrec9Operator: ( [ "<<" ">>" ] "="!~_ )
 ExprPrec9:
     (
         ExprPrec10
@@ -376,7 +526,7 @@ ExprPrec9:
         )*
     )
 
-ExprPrec10Operator: [ "+" "-" ]
+ExprPrec10Operator: ( [ "+" "-" ] "="!~_ )
 ExprPrec10:
     (
         ExprPrec11
@@ -388,7 +538,7 @@ ExprPrec10:
         )*
     )
 
-ExprPrec11Operator: [ "*" "/" "%" ]
+ExprPrec11Operator: ( [ "*" "/" "%" ] "="!~_ )
 ExprPrec11:
     (
         ExprPrec12
@@ -400,7 +550,7 @@ ExprPrec11:
         )*
     )
 
-ExprPrec12Operator: [ "++" "--" "+" "-" "!" "~" "*" "&" ExprOpTypeCast ]
+ExprPrec12Operator: [ "." "++" "--" "+" "-" "!" "~" "*" "&" ExprOpTypeCast ]
 ExprPrec12:
     (
         (
@@ -417,6 +567,12 @@ ExprOpTypeCast:
         Whitespace?_ ")"_
     )
 
+ExprPrec13Operator:
+    [
+        "++" "--"
+        ( [ "." "->" ] Identifier{ onFail: fail("Expected identifier after member access operator")} )
+        ExprOpFunctionCall ExprOpSubscript
+    ]
 ExprPrec13:
     (
         ExprPrec14
@@ -426,24 +582,16 @@ ExprPrec13:
         )*
     )
 
-ExprPrec13Operator:
-    [
-        "++" "--"
-        ( [ "." "->" ] Identifier{ onFail: fail("Expected identifier after member access operator")} )
-        ExprOpFunctionCall
-        ExprOpSubscript
-    ]
-
 ExprOpFunctionCall:
     (
         "("_ Whitespace?_
         FunctionCallBlueprintParameters
         (
-            Expression
+            FunctionCallArgument
             (
                 Whitespace?_ ","_
                 Whitespace?_
-                Expression{ onFail: fail("Expected function call argument after comma") }
+                FunctionCallArgument{ onFail: fail("Expected function call argument after comma") }
             )*
         )?
         Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for function call") }
@@ -460,12 +608,16 @@ FunctionCallBlueprintParameters:
                 FunctionCallBlueprintParameter{ onFail: fail("Expected function call blueprint parameter after comma") }
             )*
         )?
-        "}"_{ onFail: fail("Expected closing brace for function blueprint parameters") }
+        Whitespace?_ "}"_{ onFail: fail("Expected closing brace for function blueprint parameters") }
     )
     ""_
 
 FunctionCallBlueprintParameter:
     Datatype
+
+FunctionCallArgument:
+    Expression
+    "..."
 
 ExprOpSubscript:
     (
@@ -503,9 +655,10 @@ CommentMultiLine(hidden fuse):
 
 \\ ---------------- LITERALS ----------------
 
-Literal:
+Literal(hidden):
     LiteralInteger
     LiteralString
+    LiteralChar
 
 LiteralInteger(fuse):
     '09'+
@@ -515,6 +668,13 @@ LiteralString(fuse):
         "\""_
         StringChar*
         "\""_{ onFail: fail("Expected closing quote for string literal") }
+    )
+
+LiteralChar(fuse):
+    (
+        "'"_
+        StringChar
+        "'"_{ onFail: fail("Expected closing quote for character literal") }
     )
 
 StringChar(hidden):
@@ -537,11 +697,21 @@ NonCodeBlock(hidden):
         )*
     )
 
+SymbolReference:
+    (
+        "."?
+        Identifier
+        (
+            "."_
+            Identifier{ onFail: fail("Expected identifier after space access operator") }
+        )*
+    )
+
 EscapeSequence(fuse):
     (
         "\\"_
         [
-            "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\""
+            "0" "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\""
             (
                 "x" (HexChar HexChar){ onFail: fail("Expected hexadecimal escape sequence after '\\x'") }
             )
