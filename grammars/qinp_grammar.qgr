@@ -9,6 +9,7 @@ GlobalCode:
             "\n"_
             CodeItem
         )*
+        NonCodeBlock?
     )
 
 CodeItem(hidden):
@@ -24,6 +25,7 @@ CodeItem(hidden):
     StatementPackDeclDef
     StatementEnumDeclDef
     StatementFunctionDeclDef
+    StatementExternFunctionDecl
     StatementVariableDeclDef
     StatementInlineAssembly
     Expression
@@ -104,20 +106,28 @@ StatementDefine:
         Identifier{ onFail: fail("Expected macro name") }
         MacroParameters
         Whitespace?_
-        CodeItem{ onFail: fail("Expected macro body") }
+        [
+            ( Datatype Whitespace?_ Comment? Newline~_ )
+            CodeItem
+        ]{ onFail: fail("Expected macro body") }
     )
 
 MacroParameters:
     (
-        Whitespace?_ "("_
+        "("_
         (
             Whitespace?_
             Identifier{ onFail: fail("Expected macro parameter name") }
             (
                 Whitespace?_ ","_
                 Whitespace?_
-                Identifier{ onFail: fail("Expected macro parameter after comma") }
+                Identifier
             )*
+            (
+                Whitespace?_ ","_
+                Whitespace?_
+                "..."_{ onFail: fail("Expected variadic macro parameter") }
+            )?
         )
         Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for macro parameter list") }
     )
@@ -154,10 +164,12 @@ StatementIfElifElse:
     (
         StatementIf
         (
+            NonCodeBlock?
             "\n"_ Indentation_
             StatementElif
         )*
         (
+            NonCodeBlock?
             "\n"_ Indentation_
             StatementElse
         )?
@@ -207,7 +219,12 @@ PackDeclaration:
     Whitespace?_ "..."_
 
 PackDefinition:
-    Whitespace?_ ":"_ CodeBlock{ onFail: fail("Expected pack body")}
+    PackSpecifiers Whitespace?_ ":"_ CodeBlock{ onFail: fail("Expected pack body")}
+
+PackSpecifiers:
+    [
+        "!"_->RequiresPredeclaration
+    ]?
 
 \\ ---------------- ENUMS ----------------
 
@@ -323,13 +340,28 @@ FunctionDeclaration:
 FunctionDefinition:
     Whitespace?_ ":"_ CodeBlock{ onFail: fail("Expected function body")}
 
+StatementExternFunctionDecl:
+    (
+        "extern"_ Whitespace_
+        FunctionHeader
+        Whitespace?_ "="_{ onFail: fail("Expected equals sign") }
+        Whitespace?_ LiteralString{ onFail: fail("Expected function name") }
+    )
+
 \\ ---------------- VARIABLES ----------------
 
 StatementVariableDeclDef:
     VariableDeclarator VariableDatatype Whitespace?_ VariableName{ onFail: fail("Expected variable name") } VariableInitializer
 
 VariableDeclarator:
-    ("static" Whitespace_)? [ "var" "const" ]
+    (
+        "static"
+        (
+            Whitespace_
+            [ "var" "const"]
+        )?
+    )
+    [ "var" "const" ]
 
 VariableDatatype:
     (
@@ -377,13 +409,42 @@ InlineAsmBody:
 
 \\ ---------------- DATATYPES ----------------
 
-Datatype:
+Datatype(hidden):
+    DatatypeBlueprint
+    DatatypeFunction
+    DatatypeNamed
+
+DatatypeBlueprint:
     (
         "?"_
         Identifier{ onFail: fail("Expected function blueprint parameter name") }
-    )->Blueprint
+    )
+
+DatatypeFunction:
     (
-        Identifier
+        "fn"_ Whitespace?_
+        FunctionReturnType
+        Whitespace?_
+        DatatypeFunctionParameters
+    )
+
+DatatypeFunctionParameters:
+    (
+        "("_ Whitespace?_
+        (
+            Datatype
+            (
+                Whitespace?_ ","_
+                Whitespace?_
+                Datatype{ onFail: fail("Expected function parameter after comma") }
+            )*
+        )?
+        Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis") }
+    )
+
+DatatypeNamed:
+    (
+        SymbolReference
         Whitespace?_
         ("const"_->Const)?
         (
@@ -402,7 +463,7 @@ Datatype:
             )
             Whitespace?_
         )*
-    )->Named
+    )
 
 \\ ---------------- EXPRESSIONS ----------------
 
@@ -453,7 +514,7 @@ ExprPrec3:
         )*
     )
 
-ExprPrec4Operator: [ ( "|" "|"!~_ ) ]
+ExprPrec4Operator: [ ( "|" [ "|" "=" ]!~_ ) ]
 ExprPrec4:
     (
         ExprPrec5
@@ -477,7 +538,7 @@ ExprPrec5:
         )*
     )
 
-ExprPrec6Operator: [ ( "&" "&"!~_ ) ]
+ExprPrec6Operator: [ ( "&" [ "&" "=" ]!~_ ) ]
 ExprPrec6:
     (
         ExprPrec7
@@ -550,14 +611,26 @@ ExprPrec11:
         )*
     )
 
-ExprPrec12Operator: [ "." "++" "--" "+" "-" "!" "~" "*" "&" "sizeof" ExprOpTypeCast ]
+\\ TODO: Proper sizeof operator
+ExprPrec12Operator: [ "." "++" "--" "+" "-" "!" "~" "*" "&" ExprOpTypeCast ]
 ExprPrec12:
     (
         (
             Whitespace?_
             ExprPrec12Operator
         )*
-        ExprPrec13
+        [
+            (
+                "sizeof"
+                Whitespace?_ "("_
+                [
+                    Datatype
+                    Expression{ onFail: fail("Expected expression after sizeof operator") }
+                ]
+                Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for sizeof operator") }
+            )
+            ExprPrec13
+        ]
     )
 
 ExprOpTypeCast:
@@ -628,8 +701,22 @@ ExprOpSubscript:
 
 ExprPrec14:
     "("_ Whitespace?_ Expression Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for atom")}
+    LambdaDefinition
     Identifier
     Literal
+
+LambdaDefinition:
+    (
+        "lambda"_ Whitespace?_
+        FunctionReturnType
+        Whitespace?_
+        FunctionParameters{ onFail: fail("Expected lambda parameters") }
+        Whitespace?_
+        ":"_{ onFail: fail("Expected colon") }
+        Whitespace?_
+        CodeItem{ onFail: fail("Expected lambda body") }
+        ";"_{ onFail: fail("Expected semicolon after lambda definition") }
+    )
 
 \\ ---------------- INDENTATION ----------------
 
@@ -660,8 +747,38 @@ Literal(hidden):
     LiteralString
     LiteralChar
 
-LiteralInteger(fuse):
-    '09'+
+LiteralInteger(hidden):
+    LiteralIntegerBin
+    LiteralIntegerHex
+    LiteralIntegerOct
+    LiteralIntegerDec
+
+LiteralIntegerBin(fuse):
+    (
+        "0b"_
+        BinChar+
+        ( "_"_ BinChar+ )*
+    )
+
+LiteralIntegerOct(fuse):
+    (
+        "0"_
+        OctChar+
+        ( "_"_ OctChar+ )*
+    )
+
+LiteralIntegerDec(fuse):
+    (
+        DecChar+
+        ( "_"_ DecChar+ )*
+    )
+
+LiteralIntegerHex(fuse):
+    (
+        "0x"_
+        HexChar+
+        ( "_"_ HexChar+ )*
+    )
 
 LiteralString(fuse):
     (
@@ -703,7 +820,7 @@ SymbolReference:
         Identifier
         (
             "."_
-            Identifier{ onFail: fail("Expected identifier after space access operator") }
+            Identifier
         )*
     )
 
@@ -729,4 +846,9 @@ DecChar(hidden): '09'
 HexChar(hidden): [ '09' 'af' 'AF' ]
 
 Newline: "\n"
-Whitespace(fuse): [ " " "\t" ]+
+Whitespace(fuse):
+    [
+        " "
+        "\t"
+        "\\\n"
+    ]+
