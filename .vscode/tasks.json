@@ -5,7 +5,10 @@
 			"type": "shell",
 			"label": "build",
 			"command": "./build.sh",
-			"args": [ "Debug" ]
+			"args": [ "Debug" ],
+			"presentation": {
+				"clear": true
+			}
 		}
 	]
 }

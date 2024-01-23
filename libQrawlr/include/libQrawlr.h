@@ -1,3 +1,3 @@
 #pragma once
 
-void say_hello();
+#include "Grammar.h"

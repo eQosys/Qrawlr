@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 
 add_library(
     libqrawlr
-    "src/libQrawlr.cpp"
+    "src/Grammar.cpp"
 )
 
 target_include_directories(
