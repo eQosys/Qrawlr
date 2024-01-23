@@ -470,6 +470,8 @@ DatatypeNamed:
 Expression:
     ExprPrec1
 
+\\ Assignment operators and ternary operator
+ExprPrec1Operator: [ "=" "+=" "-=" "*=" "/=" "%=" "&=" "|=" "^=" "<<=" ">>=" TernaryOperator ]
 ExprPrec1:
     (
         ExprPrec2
@@ -481,9 +483,15 @@ ExprPrec1:
         )*
     )
 
-ExprPrec1Operator: [ "=" "+=" "-=" "*=" "/=" "%=" "&=" "|=" "^=" "<<=" ">>=" TernaryOperator ]
+TernaryOperator:
+    (
+        "?"_ Whitespace?_
+        Expression{ onFail: fail("Expected option 'true' for ternary operator") }
+        Whitespace?_ ":"_{ onFail: fail("Expected colon for ternary operator") }
+    )
 
-ExprPrec2Operator: [ "||" ]
+\\ Logical OR
+ExprPrec2Operator: "||"
 ExprPrec2:
     (
         ExprPrec3
@@ -495,14 +503,8 @@ ExprPrec2:
         )*
     )
 
-TernaryOperator:
-    (
-        "?"_ Whitespace?_
-        Expression{ onFail: fail("Expected option 'true' for ternary operator") }
-        Whitespace?_ ":"_{ onFail: fail("Expected colon for ternary operator") }
-    )
-
-ExprPrec3Operator: [ "&&" ]
+\\ Logical AND
+ExprPrec3Operator: "&&"
 ExprPrec3:
     (
         ExprPrec4
@@ -514,7 +516,8 @@ ExprPrec3:
         )*
     )
 
-ExprPrec4Operator: [ ( "|" [ "|" "=" ]!~_ ) ]
+\\ Bitwise OR
+ExprPrec4Operator: ( "|" [ "|" "=" ]!~_ )
 ExprPrec4:
     (
         ExprPrec5
@@ -526,7 +529,8 @@ ExprPrec4:
         )*
     )
 
-ExprPrec5Operator: [ "^" ]
+\\ Bitwise XOR
+ExprPrec5Operator: ( "^" [ "^" "=" ]!~_ )
 ExprPrec5:
     (
         ExprPrec6
@@ -538,7 +542,8 @@ ExprPrec5:
         )*
     )
 
-ExprPrec6Operator: [ ( "&" [ "&" "=" ]!~_ ) ]
+\\ Bitwise AND
+ExprPrec6Operator: ( "&" [ "&" "=" ]!~_ )
 ExprPrec6:
     (
         ExprPrec7
@@ -551,6 +556,7 @@ ExprPrec6:
     )
 
 
+\\ Comparison operators (equal, not equal)
 ExprPrec7Operator: [ "==" "!=" ]
 ExprPrec7:
     (
@@ -563,6 +569,7 @@ ExprPrec7:
         )*
     )
 
+\\ Comparison operators (less than, less than or equal, greater than, greater than or equal)
 ExprPrec8Operator: [ "<=" "<" ">=" ">" ]
 ExprPrec8:
     (
@@ -575,6 +582,7 @@ ExprPrec8:
         )*
     )
 
+\\ Bitwise shift operators
 ExprPrec9Operator: ( [ "<<" ">>" ] "="!~_ )
 ExprPrec9:
     (
@@ -587,6 +595,7 @@ ExprPrec9:
         )*
     )
 
+\\ Addition and subtraction
 ExprPrec10Operator: ( [ "+" "-" ] "="!~_ )
 ExprPrec10:
     (
@@ -599,6 +608,7 @@ ExprPrec10:
         )*
     )
 
+\\ Multiplication, division and modulo
 ExprPrec11Operator: ( [ "*" "/" "%" ] "="!~_ )
 ExprPrec11:
     (
@@ -611,6 +621,7 @@ ExprPrec11:
         )*
     )
 
+\\ Prefix operators
 \\ TODO: Proper sizeof operator
 ExprPrec12Operator: [ "." "++" "--" "+" "-" "!" "~" "*" "&" ExprOpTypeCast ]
 ExprPrec12:
@@ -620,17 +631,20 @@ ExprPrec12:
             ExprPrec12Operator
         )*
         [
-            (
-                "sizeof"
-                Whitespace?_ "("_
-                [
-                    Datatype
-                    Expression{ onFail: fail("Expected expression after sizeof operator") }
-                ]
-                Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for sizeof operator") }
-            )
+            ExprOpSizeof
             ExprPrec13
         ]
+    )
+
+ExprOpSizeof(hidden):
+    (
+        "sizeof"
+        Whitespace?_ "("_
+        [
+            Datatype
+            Expression{ onFail: fail("Expected expression after sizeof operator") }
+        ]
+        Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for sizeof operator") }
     )
 
 ExprOpTypeCast:
@@ -640,12 +654,8 @@ ExprOpTypeCast:
         Whitespace?_ ")"_
     )
 
-ExprPrec13Operator:
-    [
-        "++" "--"
-        ( [ "." "->" ] Identifier{ onFail: fail("Expected identifier after member access operator")} )
-        ExprOpFunctionCall ExprOpSubscript
-    ]
+\\ Postfix operators
+ExprPrec13Operator: [ "++" "--" ExprOpFunctionCall ExprOpSubscript ]
 ExprPrec13:
     (
         ExprPrec14
@@ -699,7 +709,19 @@ ExprOpSubscript:
         Whitespace?_ "]"_{ onFail: fail("Expected closing bracket for subscript") }
     )
 
+ExprPrec14Operator: [ "." "->" ]
 ExprPrec14:
+    (
+        ExprPrec15
+        (
+            Whitespace?_
+            ExprPrec14Operator
+            Whitespace?_
+            ExprPrec15{ onFail: fail("Expected expression after operator [lvl-14]") }
+        )*
+    )
+
+ExprPrec15:
     "("_ Whitespace?_ Expression Whitespace?_ ")"_{ onFail: fail("Expected closing parenthesis for atom")}
     LambdaDefinition
     Identifier
@@ -755,15 +777,13 @@ LiteralInteger(hidden):
 
 LiteralIntegerBin(fuse):
     (
-        "0b"_
-        BinChar+
+        "0b"_ BinChar+
         ( "_"_ BinChar+ )*
     )
 
 LiteralIntegerOct(fuse):
     (
-        "0"_
-        OctChar+
+        "0"_ OctChar+
         ( "_"_ OctChar+ )*
     )
 
@@ -775,22 +795,19 @@ LiteralIntegerDec(fuse):
 
 LiteralIntegerHex(fuse):
     (
-        "0x"_
-        HexChar+
+        "0x"_ HexChar+
         ( "_"_ HexChar+ )*
     )
 
 LiteralString(fuse):
     (
-        "\""_
-        StringChar*
+        "\""_ StringChar*
         "\""_{ onFail: fail("Expected closing quote for string literal") }
     )
 
 LiteralChar(fuse):
     (
-        "'"_
-        StringChar
+        "'"_ StringChar
         "'"_{ onFail: fail("Expected closing quote for character literal") }
     )
 

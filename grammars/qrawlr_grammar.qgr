@@ -80,8 +80,9 @@ Matcher(hidden):
     MatchRule
     MatchStack
 
-MatchAnyChar:
-    "."_
+MatchAnyChar: "."_
+MatchExact: String
+MatchRule: Identifier
 
 MatchAll:
     (
@@ -106,12 +107,6 @@ MatchRange:
         "'"_{ onFail: fail("Expected '''") }
     )
 
-MatchExact:
-    String
-
-MatchRule:
-    Identifier
-
 MatchStack:
     (
         ":"_
@@ -126,9 +121,6 @@ MatchStack:
 MatcherModifiers:
     [ MatcherModifierInvert MatcherModifierQuantifier MatcherModifierLookAhead MatcherModifierOmitMatch MatcherModifierReplaceMatch ]*
 
-MatcherModifierInvert:
-    "!"_
-
 MatcherModifierQuantifier:
     [ "?" "*" "+" ]->QuantifierSymbolic
     ( "#"_ Integer "-"_ Integer{ onFail: fail("Expected quantifier range maximum value") } )->QuantifierRange
@@ -136,14 +128,12 @@ MatcherModifierQuantifier:
     ( "#>"_ Integer{ onFail: fail("Expected lower bound value") } )->QuantifierLowerBound
     ( "#<"_ Integer{ onFail: fail("Expected upper bound value") } )->QuantifierUpperBound
 
-MatcherModifierLookAhead:
-    "~"_
-
-MatcherModifierOmitMatch:
-    "_"_
-
 MatcherModifierReplaceMatch:
     "->"_ [ Identifier String MatchStack ]{ onFail: fail("Expected identifier, string or stack reference") }
+
+MatcherModifierInvert: "!"_
+MatcherModifierLookAhead: "~"_
+MatcherModifierOmitMatch: "_"_
 
 \\ ---------------- MATCHER ACTIONS ----------------
 
@@ -203,18 +193,13 @@ MatcherActionArgument(hidden):
 
 \\ ---------------- IDENTIFIER ----------------
 
-Identifier(fuse):
-    AlphaChar AlnumChar*
+Identifier(fuse): AlphaChar AlnumChar*
 
 \\ ---------------- COMMENT ----------------
 
-Comment(fuse):
-    "\\\\" Newline!*
+Comment(fuse): "\\\\" Newline!*
 
 \\ ---------------- MISCELLANEOUS ----------------
-
-MatchRangeChar:
-    "\\"? .
 
 Integer(fuse):
     "0x"_ HexChar+{ onFail: fail("Expected hexadecimal integer literal") } ""_->FormatHex
@@ -224,47 +209,24 @@ Integer(fuse):
 
 String(fuse):
     (
-        "\""_
-        StringChar*
+        "\""_ StringChar*
         "\""_{ onFail: fail("Expected '\"'") }
     )
-
-StringChar(hidden):
-    EscapeSequence
-    "\""!
 
 EscapeSequence(fuse):
     "\\"_ [ "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\"" ]
     "\\"_ "x" (HexChar HexChar){ onFail: fail("Expected hexadecimal escape sequence") }
 
-AlphaChar(hidden):
-    'az'
-    'AZ'
-
-HexChar(hidden):
-    '09'
-    'af'
-    'AF'
-
-BinChar(hidden):
-    '01'
-
-OctChar(hidden):
-    '07'
-
-DecChar(hidden):
-    '09'
-
-AlnumChar(hidden):
-    AlphaChar
-    DecChar
-
-Newline(hidden):
-    "\x0a"
-
-Whitespace(fuse):
-    [ " " "\t" ]+
+MatchRangeChar: "\\"? .
+StringChar(hidden): [ EscapeSequence "\""! ]
+AlphaChar(hidden): [ 'az' 'AZ' ]
+HexChar(hidden): [ '09' 'af' 'AF' ]
+BinChar(hidden): '01'
+OctChar(hidden): '07'
+DecChar(hidden): '09'
+AlnumChar(hidden): [ AlphaChar DecChar ]
+Newline(hidden): "\n"
+Whitespace(fuse): [ " " "\t" ]+
 
 \\ Whitespace or Newline with optional comment
-WoNwoC(hidden):
-    [ Whitespace_ Newline_ Comment ]+
+WoNwoC(hidden): [ Whitespace_ Newline_ Comment ]+

@@ -1,5 +1,6 @@
 import os
 import cProfile
+import time
 from Grammar import Grammar
 from GrammarException import GrammarException
 from GrammarLoader import GrammarLoader
@@ -148,6 +149,7 @@ QINP_DIR = "../QINP/stdlib"
 
 def test_qinp(test_all = False):
     grammar = GrammarLoader(path = "grammars/qinp_grammar.qgr").get_grammar()
+    begin = time.time()
     if test_all:
         for root, dirs, files in os.walk(QINP_DIR):
             for name in files:
@@ -168,11 +170,15 @@ def test_qinp(test_all = False):
 
         run_test("grammars/qinp_grammar.qgr", "GlobalCode", text, filename, verbose = True)
 
+    end = time.time()
+
+    print(f"  INFO: Testing took {end - begin} seconds")
+
 if __name__ == "__main__":
     try:
         #test_qism()
-        cProfile.run("test_qinp(True)", sort="tottime")
-        #test_qinp(True)
+        #cProfile.run("test_qinp(True)", sort="tottime")
+        test_qinp(True)
         #test_algebra()
         #test_grammar(True)
     except GrammarException as e:
