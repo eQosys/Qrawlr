@@ -1,6 +1,7 @@
 import os
-import json
-from Grammar import GrammarException
+import cProfile
+from Grammar import Grammar
+from GrammarException import GrammarException
 from GrammarLoader import GrammarLoader
 from GrammarParseTree import ParseTree, ParseTreeNode, ParseTreeExactMatch
 
@@ -75,10 +76,16 @@ def evaluate_expression(tree: ParseTree):
     else:
         raise GrammarException("Expected ParseTreeNode but got", type(tree))
 
-def run_test(grammarfile: str, entry_rule: str, text: str, filename: str = None, verbose: bool = True, do_write_tree: bool = False, do_render_tree: bool = True):
-    print(f"INFO: Testing {grammarfile} on {filename}")
+def run_test(grammar_source: str|Grammar, entry_rule: str, text: str, filename: str = None, verbose: bool = True, do_write_tree: bool = False, do_render_tree: bool = True):
+    if isinstance(grammar_source, str):
+        print(f"INFO: Loading grammar from {grammar_source}")
+        g = GrammarLoader(path = grammar_source).get_grammar()
+    elif isinstance(grammar_source, Grammar):
+        g = grammar_source
+    else:
+        raise GrammarException("Unknown grammar source", grammar_source)
     
-    g = GrammarLoader(path = grammarfile).get_grammar()
+    print(f"INFO: Testing grammar on {filename if filename else 'text'}")
 
     result = g.apply_to(text, entry_rule, filename)
     
@@ -140,6 +147,7 @@ def test_qism():
 QINP_DIR = "../QINP/stdlib"
 
 def test_qinp(test_all = False):
+    grammar = GrammarLoader(path = "grammars/qinp_grammar.qgr").get_grammar()
     if test_all:
         for root, dirs, files in os.walk(QINP_DIR):
             for name in files:
@@ -148,7 +156,7 @@ def test_qinp(test_all = False):
                     with open(filename, "r") as f:
                         text = f.read()
 
-                    result = run_test("grammars/qinp_grammar.qgr", "GlobalCode", text, filename, verbose=True, do_write_tree=False, do_render_tree=False)
+                    result = run_test(grammar, "GlobalCode", text, filename, verbose=True, do_write_tree=False, do_render_tree=False)
 
                     if result.farthest_match_position.index < len(text):
                         exit(1)
@@ -163,7 +171,8 @@ def test_qinp(test_all = False):
 if __name__ == "__main__":
     try:
         #test_qism()
-        test_qinp(True)
+        cProfile.run("test_qinp(True)", sort="tottime")
+        #test_qinp(True)
         #test_algebra()
         #test_grammar(True)
     except GrammarException as e:
