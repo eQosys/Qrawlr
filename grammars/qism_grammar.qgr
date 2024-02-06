@@ -29,10 +29,15 @@ Literal:
 	( [ "rel" "upr" "lwr" ] ":"_ )? [LiteralInteger LabelName]
 
 LiteralInteger(fuse):
-	Sign? "0x" [ NumChar "a" "b" "c" "d" "e" "f" "A" "B" "C" "D" "E" "F" ]+
-	Sign? "0b" [ "0" "1" ]+
-	Sign? "0"~  [ "0" "1" "2" "3" "4" "5" "6" "7" ]*
-	Sign? NumChar+
+	(
+		Sign?
+		[
+			( "0x" [ NumChar "a" "b" "c" "d" "e" "f" "A" "B" "C" "D" "E" "F" ]+ )
+			( "0b" [ "0" "1" ]+ )
+			( "0"~  [ "0" "1" "2" "3" "4" "5" "6" "7" ]* )
+			NumChar+
+		]
+	)
 
 Sign(hidden):
 	[ "+"_ "-" ]
