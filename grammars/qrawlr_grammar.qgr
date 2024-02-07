@@ -103,7 +103,7 @@ MatchAny:
 MatchRange:
     (
         "'"_
-        MatchRangeChar#2{ onFail: fail("Expected exactly two characters")}
+        MatchRangeChar#2{ onFail: fail("Expected exactly two characters") }
         "'"_{ onFail: fail("Expected '''") }
     )
 
@@ -159,7 +159,7 @@ MatcherActionList:
                 WoNwoC?
                 ","_
                 WoNwoC?
-                MatcherAction{ onFail: fail("Expected matcher action after ','")}
+                MatcherAction{ onFail: fail("Expected matcher action after ','") }
             )*
             WoNwoC?
         )
@@ -179,7 +179,7 @@ MatcherActionArgumentList:
                 WoNwoC?
                 ","_
                 WoNwoC?
-                MatcherActionArgument{ onFail: fail("Expected matcher action argument after ','")}
+                MatcherActionArgument{ onFail: fail("Expected matcher action argument after ','") }
             )*
             WoNwoC?
         )
@@ -217,7 +217,7 @@ EscapeSequence(fuse):
     "\\"_ [ "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\"" ]
     "\\"_ "x" (HexChar HexChar){ onFail: fail("Expected hexadecimal escape sequence") }
 
-MatchRangeChar: "\\"? .
+MatchRangeChar: [ EscapeSequence . ]
 StringChar(hidden): [ EscapeSequence "\""! ]
 AlphaChar(hidden): [ 'az' 'AZ' ]
 HexChar(hidden): [ '09' 'af' 'AF' ]

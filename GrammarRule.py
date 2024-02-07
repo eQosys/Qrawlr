@@ -139,7 +139,9 @@ class Matcher(ABC):
         tree = ParseTreeNode(parseData.get_position(index))
         while True:
             sub_tree, sub_index = self._match_specific(parseData, index)
-            sub_tree, index = self._apply_optional_invert(parseData, index, sub_index, sub_tree)
+            sub_tree, sub_index = self._apply_optional_invert(parseData, index, sub_index, sub_tree)
+
+            index = sub_index
 
             if sub_tree is None:
                 break
@@ -502,9 +504,9 @@ class MatcherMatchAny(MatcherList):
 
     def _match_specific(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
         for option in self.options:
-            node, index = option.match(parseData, index)
+            node, new_index = option.match(parseData, index)
             if node is not None:
-                return node, index
+                return node, new_index
         return None, index
     
     def _to_string(self) -> str:
