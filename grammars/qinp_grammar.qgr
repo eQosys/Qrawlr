@@ -806,7 +806,7 @@ LiteralString(fuse):
 
 LiteralChar(fuse):
     (
-        "'"_ StringChar
+        "'"_ [ EscapeSequence . ]
         "'"_{ onFail: fail("Expected closing quote for character literal") }
     )
 
