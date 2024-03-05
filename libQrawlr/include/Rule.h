@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RuleRef.h"
 #include "Matcher.h"
 
 namespace qrawlr

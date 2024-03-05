@@ -17,6 +17,7 @@ add_library(
     "src/Action.cpp"
     "src/Grammar.cpp"
     "src/Matcher.cpp"
+    "src/ParseData.cpp"
     "src/ParseTree.cpp"
     "src/FileReader.cpp"
 )

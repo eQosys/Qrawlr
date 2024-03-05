@@ -862,9 +862,4 @@ DecChar(hidden): '09'
 HexChar(hidden): [ '09' 'af' 'AF' ]
 
 Newline: "\n"
-Whitespace(fuse):
-    [
-        " "
-        "\t"
-        "\\\n"
-    ]+
+Whitespace(fuse): [ " " "\t" "\\\n" ]+

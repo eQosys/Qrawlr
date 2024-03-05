@@ -39,20 +39,13 @@ LiteralInteger(fuse):
 		]
 	)
 
-Sign(hidden):
-	[ "+"_ "-" ]
+Sign(hidden): [ "+"_ "-" ]
 
-LabelName(fuse):
-	AlphaChar AlnumChar*
+LabelName(fuse): AlphaChar AlnumChar*
+LabelDefinition: "->"_ LabelName
 
-LabelDefinition:
-	"->"_ LabelName
-
-Comment(fuse):
-	"~~" "\n"!*
-
-String(fuse):
-	"\""_ StringChar* "\""_
+Comment(fuse): "~~" "\n"!*
+String(fuse): "\""_ StringChar* "\""_
 
 StringChar(hidden):
     EscapeSequence
@@ -62,18 +55,7 @@ EscapeSequence(fuse):
     "\\"_ [ "a" "b" "e" "f" "n" "r" "t" "v" "\\" "'" "\"" ]
     "\\"_ "x" HexChar HexChar
 
-HexChar(hidden):
-	'09'
-	'af'
-	'AF'
-
-AlnumChar(hidden):
-	AlphaChar
-	NumChar
-
-AlphaChar(hidden):
-	'az'
-	'AZ'
-
-NumChar(hidden):
-	'09'
+HexChar(hidden): [ '09' 'af' 'AF' ]
+AlnumChar(hidden): [ AlphaChar NumChar ]
+AlphaChar(hidden): [ 'az' 'AZ' ]
+NumChar(hidden): '09'

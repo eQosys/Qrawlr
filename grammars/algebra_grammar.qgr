@@ -28,5 +28,4 @@ Atom:
 	)
 	Number
 
-Number(hidden fuse):
-	'09'+
+Number(hidden fuse): '09'+

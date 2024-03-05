@@ -1,7 +1,5 @@
 #include "Grammar.h"
 
-#include <fstream>
-
 #include "GrammarException.h"
 #include "FileReader.h"
 

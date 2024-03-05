@@ -11,9 +11,11 @@ namespace qrawlr
 
     MatchResult Matcher::match(const ParseData& data, int index) const
     {
-        // TODO: Proper implementation
-        MatchResult result = match_impl(data, index);
-        return result;
+        int index_old = index;
+        int match_count = 0;
+        auto checkpoint = data.get_checkpoint();
+
+        return { };
     }
 
     void Matcher::add_action(const std::string& trigger, const Action& action)
