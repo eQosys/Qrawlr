@@ -437,17 +437,6 @@ class Matcher(ABC):
     def _generate_python_code(self) -> str:
         raise NotImplementedError("Matcher._generate_python_code() must be implemented by subclasses")
 
-class MatcherList(Matcher):
-    def __init__(self, options: list[Matcher] = [], *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.options: list[Matcher] = list(options)
-
-    def _generate_python_code_option_list(self) -> str:
-        optionStrs = []
-        for option in self.options:
-            optionStrs.append(option._generate_python_code())
-        return f"[{', '.join(optionStrs)}]"
-
 # .
 class MatcherMatchAnyChar(Matcher):
     def __init__(self, *args, **kwargs) -> None:
@@ -466,6 +455,17 @@ class MatcherMatchAnyChar(Matcher):
     
     def _generate_python_code(self) -> str:
         return f"MatcherMatchAnyChar({self._initializers_to_arg_str()})"
+
+class MatcherList(Matcher):
+    def __init__(self, options: list[Matcher] = [], *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.options: list[Matcher] = list(options)
+
+    def _generate_python_code_option_list(self) -> str:
+        optionStrs = []
+        for option in self.options:
+            optionStrs.append(option._generate_python_code())
+        return f"[{', '.join(optionStrs)}]"
 
 # (...)
 class MatcherMatchAll(MatcherList):

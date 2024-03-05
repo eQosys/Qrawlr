@@ -21,6 +21,8 @@ namespace qrawlr
 
     Grammar Grammar::load_from_text(const std::string& text)
     {
+        (void)text; // Currently unused
+        
         Grammar grammar;
         return grammar;
     }
