@@ -10,7 +10,7 @@ namespace qrawlr
             Identifier,
             String,
             Stack
-        } m_type = Type::None;
-        std::string m_value = "";
+        } type = Type::None;
+        std::string value = "";
     };
 } // namespace qrawlr

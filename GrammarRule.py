@@ -380,7 +380,7 @@ class Matcher(ABC):
             if repl_type == MATCH_REPL_STRING:
                 mod_str += f"\"{escape_string(repl)}\""
             elif repl_type == MATCH_REPL_STACK:
-                mod_str += f":{escape_string(repl)}"
+                mod_str += f":{escape_string(repl)}:"
             elif repl_type == MATCH_REPL_IDENTIFIER:
                 mod_str += repl
             else:

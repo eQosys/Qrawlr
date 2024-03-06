@@ -20,6 +20,7 @@ add_library(
     "src/ParseData.cpp"
     "src/ParseTree.cpp"
     "src/FileReader.cpp"
+    "src/EscapeString.cpp"
 )
 
 target_include_directories(

@@ -18,11 +18,12 @@ namespace qrawlr
             std::map<std::string, int> stack_sizes;
         };
     public:
-        ParseData() = default;
+        ParseData() = delete;
+        ParseData(const std::string& text, const std::string& filename, const std::map<std::string, RuleRef>& rules);
         ~ParseData() = default;
     public:
         const std::string& get_text() const { return m_text; }
-        RuleRef get_rule(const std::string& name) { return m_rules[name]; }
+        RuleRef get_rule(const std::string& name) const { return m_rules.find(name)->second; }
         std::set<std::string> get_stack_names() const;
         std::vector<std::string>& get_stack(const std::string& name) { return m_stacks[name]; }
         std::vector<std::pair<std::string, std::string>>& get_stack_history(const std::string& name) { return m_stack_histories[name]; }
@@ -32,12 +33,14 @@ namespace qrawlr
         Position get_position(int index) const;
         std::string get_position_string(int index) const;
         bool stacks_are_empty() const;
+        int get_farthest_match_index() const { return m_farthest_match_index; }
+        void set_farthest_match_index(int index) { m_farthest_match_index = index; }
     private:
         void generate_newline_indices();
     private:
         std::string m_text;
         std::string m_filename;
-        std::map<std::string, RuleRef> m_rules;
+        const std::map<std::string, RuleRef>& m_rules;
         std::map<std::string, std::vector<std::string>> m_stacks;
         std::map<std::string, std::vector<std::pair<std::string, std::string>>> m_stack_histories;
         std::vector<int> m_newline_indices;

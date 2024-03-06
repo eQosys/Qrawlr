@@ -1,10 +1,19 @@
 #include "ParseData.h"
 
-#include <stdexcept>
 #include <algorithm>
+
+#include "GrammarException.h"
 
 namespace qrawlr
 {
+    ParseData::ParseData(const std::string& text, const std::string& filename, const std::map<std::string, RuleRef>& rules)
+        : m_text(text), m_filename(filename), m_rules(rules),
+        m_stacks(), m_stack_histories(),
+        m_farthest_match_index(0)
+    {
+        generate_newline_indices();
+    }
+
     std::set<std::string> ParseData::get_stack_names() const
     {
         std::set<std::string> names;
@@ -37,7 +46,7 @@ namespace qrawlr
                 else if (item.first == "pop")
                     stack.push_back(item.second);
                 else
-                    throw std::runtime_error("Invalid stack history item");
+                    throw GrammarException("Invalid stack history item");
             }
         }
     }

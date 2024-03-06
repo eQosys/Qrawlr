@@ -50,6 +50,16 @@ namespace qrawlr
         : ParseTree(pos_begin)
     {}
 
+    std::string ParseTreeNode::to_string() const
+    {
+        std::string result;
+
+        for (auto& child : m_children)
+            result += child->to_string();
+
+        return result;
+    }
+
     void ParseTreeNode::to_digraph_impl(Digraph& graph, bool verbose) const
     {
         // TODO: Proper implementation
@@ -82,6 +92,11 @@ namespace qrawlr
         : ParseTree(pos_begin, pos_end),
         m_value(value)
     {}
+
+    std::string ParseTreeExactMatch::to_string() const
+    {
+        return m_value;
+    }
 
     void ParseTreeExactMatch::to_digraph_impl(Digraph& graph, bool verbose) const
     {
