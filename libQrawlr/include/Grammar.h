@@ -19,6 +19,8 @@ namespace qrawlr
     public:
         static Grammar load_from_file(const std::string& filename);
         static Grammar load_from_text(const std::string& text, const std::string& filename);
+    public:
+        void add_rule(RuleRef rule);
     private:
         void load_from_tree(const ParseTreeRef tree);
     private:
@@ -56,5 +58,7 @@ namespace qrawlr
     private:
         std::map<std::string, RuleRef> m_rules;
         std::string m_filename;
+    private:
+        friend Grammar load_internal_grammar();
     };
 }; // namespace qrawlr

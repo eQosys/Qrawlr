@@ -48,6 +48,25 @@ class Grammar:
         result += "    return Grammar(rules=rules)\n"
 
         return result
+    
+    def generate_cpp_code(self, func_name: str = "load_internal_grammar", add_includes: bool = True) -> str:
+        result = ""
+        if add_includes:
+            result += "#include \"Grammar.h\"\n"
+
+        result += f"namespace qrawlr {{\n"
+        result += f"    Grammar Grammar::{func_name}() {{\n"
+        result += f"        Grammar g;\n"
+
+        for name, rule in self.rules.items():
+            result += f"        g.add_rule({rule._generate_cpp_code()});\n"
+
+        result += f"        return g;\n"
+
+        result += f"    }}\n"
+        result += f"}}\n"
+
+        return result
 
     def __str__(self) -> str:
         result = ""

@@ -21,6 +21,7 @@ add_library(
     "src/ParseTree.cpp"
     "src/FileReader.cpp"
     "src/EscapeString.cpp"
+    "src/gen/InternalGrammarLoader.cpp"
 )
 
 target_include_directories(

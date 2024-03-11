@@ -24,10 +24,10 @@ namespace qrawlr
             std::string value;
         };
     public:
-        typedef void* (*Func)(const std::vector<Arg>& args, ParseData& data, int index);
+        typedef void (*Func)(const std::vector<Arg>& args, ParseData& data, int index);
     public:
         Action() = delete;
-        Action(const std::string& name, Func action_func);
+        Action(const std::string& name, const std::vector<Arg>& args);
         ~Action() = default;
     public:
         void run(ParseTreeRef tree, ParseData& data, int index) const;

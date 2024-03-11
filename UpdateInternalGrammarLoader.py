@@ -1,7 +1,8 @@
 from GrammarException import GrammarException
 from GrammarLoader import GrammarLoader
 
-OUTPUT_PATH = "InternalGrammarLoader.py"
+OUTPUT_PATH_PYTHON = "InternalGrammarLoader.py"
+OUTPUT_PATH_CPP = "libQrawlr/src/gen/InternalGrammarLoader.cpp"
 GRAMMAR_PATH = "grammars/qrawlr_grammar.qgr"
 
 def update_internal_grammar_loader():
@@ -31,13 +32,18 @@ def update_internal_grammar_loader():
     print("TODO: Here should we run some tests...")
 
     # Generate new grammar loader
-    print("INFO: Generating new grammar loader...")
-    new_code = new_grammar.generate_python_code("load_internal_grammar", True)
-    
+    print("INFO: Generating new grammar loader (python)...")
+    new_python_code = new_grammar.generate_python_code("load_internal_grammar", True)
+    print("INFO: Generating new grammar loader (cpp)...")
+    new_cpp_code = new_grammar.generate_cpp_code("load_internal_grammar", True)
+
     # Save new grammar loader
-    print("INFO: Saving new grammar loader...")
-    with open(OUTPUT_PATH, "w") as f:
-        f.write(new_code)
+    print("INFO: Saving new grammar loader (python)...")
+    with open(OUTPUT_PATH_PYTHON, "w") as f:
+        f.write(new_python_code)
+    print("INFO: Saving new grammar loader (cpp)...")
+    with open(OUTPUT_PATH_CPP, "w") as f:
+        f.write(new_cpp_code)
 
     print("INFO: Done!")
 

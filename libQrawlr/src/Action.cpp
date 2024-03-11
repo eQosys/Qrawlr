@@ -7,9 +7,20 @@
 
 namespace qrawlr
 {
-    Action::Action(const std::string& name, Func action_func)
-        : m_name(name), m_func(action_func)
-    {}
+    Action::Action(const std::string& name, const std::vector<Arg>& args)
+        : m_name(name), m_func(nullptr), m_args(args)
+    {
+        if (name == "push")
+            m_func = action_push;
+        else if (name == "pop")
+            m_func = action_pop;
+        else if (name == "message")
+            m_func = action_message;
+        else if (name == "fail")
+            m_func = action_fail;
+        else
+            throw GrammarException("Unknown action name: " + name);
+    }
 
     void Action::run(ParseTreeRef tree, ParseData& data, int index) const
     {

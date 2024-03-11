@@ -14,6 +14,12 @@ namespace qrawlr
         m_match_repl(), m_actions()
     {}
 
+    Matcher::Matcher(const qrawlr::Flags<Flags>& flags, int count_min, int count_max, const MatchReplacement& match_repl, const std::map<std::string, std::vector<Action>>& actions)
+        : m_flags(flags),
+        m_count_min(count_min), m_count_max(count_max),
+        m_match_repl(match_repl), m_actions(actions)
+    {}
+
     MatchResult Matcher::match(ParseData& data, int index) const
     {
         int index_old = index;
@@ -266,15 +272,11 @@ namespace qrawlr
 
     // -------------------- MATCHER LIST -------------------- //
 
-    MatcherList::MatcherList(const std::vector<MatcherRef>& matchers)
-        : m_matchers(matchers)
-    {}
-
     std::string MatcherList::gen_cpp_code_matchers() const
     {
         std::string code = "{";
         for (const auto& matcher : m_matchers)
-            code += matcher->gen_cpp_code() + ", ";
+            code += matcher->gen_cpp_code() + ",";
         
         if (!m_matchers.empty())
             code.pop_back();
@@ -370,10 +372,6 @@ namespace qrawlr
 
     // -------------------- MATCHER MATCH RANGE -------------------- //
 
-    MatcherMatchRange::MatcherMatchRange(const std::string& first, const std::string& last)
-        : m_first(first), m_last(last)
-    {}
-
     MatchResult MatcherMatchRange::match_impl(ParseData& data, int index) const
     {
         if (data.eof(index))
@@ -402,10 +400,6 @@ namespace qrawlr
 
     // -------------------- MATCHER MATCH EXACT -------------------- //
 
-    MatcherMatchExact::MatcherMatchExact(const std::string& exact)
-        : m_exact(exact)
-    {}
-
     MatchResult MatcherMatchExact::match_impl(ParseData& data, int index) const
     {
         if (data.eof(index))
@@ -432,10 +426,6 @@ namespace qrawlr
 
     // -------------------- MATCHER MATCH RULE -------------------- //
 
-    MatcherMatchRule::MatcherMatchRule(const std::string& rule_name)
-        : m_rule_name(rule_name)
-    {}
-
     MatchResult MatcherMatchRule::match_impl(ParseData& data, int index) const
     {
         auto rule = data.get_rule(m_rule_name);
@@ -461,10 +451,6 @@ namespace qrawlr
     }
 
     // -------------------- MATCHER MATCH STACK -------------------- //
-
-    MatcherMatchStack::MatcherMatchStack(const std::string& stack_name, int index)
-        : m_stack_name(stack_name), m_index(index)
-    {}
 
     MatchResult MatcherMatchStack::match_impl(ParseData& data, int index) const
     {

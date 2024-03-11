@@ -30,6 +30,7 @@ namespace qrawlr
         };
     public:
         Matcher();
+        Matcher(const qrawlr::Flags<Flags>& flags, int count_min, int count_max, const MatchReplacement& match_repl, const std::map<std::string, std::vector<Action>>& actions);
         Matcher(const Matcher&) = default;
         Matcher(Matcher&&) = default;
         Matcher& operator=(const Matcher&) = default;
@@ -86,7 +87,10 @@ namespace qrawlr
     {
     public:
         MatcherList() = default;
-        MatcherList(const std::vector<MatcherRef>& matchers);
+        template <typename... Args>
+        MatcherList(const std::vector<MatcherRef>& matchers, Args... args)
+            : Matcher(args...), m_matchers(matchers)
+        {}
         virtual ~MatcherList() = default;
     public:
         void set_matchers(const std::vector<MatcherRef>& matchers) { m_matchers = matchers; }
@@ -126,7 +130,11 @@ namespace qrawlr
     class MatcherMatchRange : public Matcher
     {
     public:
-        MatcherMatchRange(const std::string& first, const std::string& last);
+        MatcherMatchRange() = delete;
+        template <typename... Args>
+        MatcherMatchRange(const std::string& first, const std::string& last, Args... args)
+            : Matcher(args...), m_first(first), m_last(last)
+        {}
         virtual ~MatcherMatchRange() = default;
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
@@ -142,7 +150,11 @@ namespace qrawlr
     class MatcherMatchExact : public Matcher
     {
     public:
-        MatcherMatchExact(const std::string& exact);
+        MatcherMatchExact() = delete;
+        template <typename... Args>
+        MatcherMatchExact(const std::string& exact, Args... args)
+            : Matcher(args...), m_exact(exact)
+        {}
         virtual ~MatcherMatchExact() = default;
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
@@ -157,7 +169,11 @@ namespace qrawlr
     class MatcherMatchRule : public Matcher
     {
     public:
-        MatcherMatchRule(const std::string& rule_name);
+        MatcherMatchRule() = delete;
+        template <typename... Args>
+        MatcherMatchRule(const std::string& rule_name, Args... args)
+            : Matcher(args...), m_rule_name(rule_name)
+        {}
         virtual ~MatcherMatchRule() = default;
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
@@ -172,7 +188,11 @@ namespace qrawlr
     class MatcherMatchStack : public Matcher
     {
     public:
-        MatcherMatchStack(const std::string& stack_name, int index);
+        MatcherMatchStack() = delete;
+        template <typename... Args>
+        MatcherMatchStack(const std::string& stack_name, int index, Args... args)
+            : Matcher(args...), m_stack_name(stack_name), m_index(index)
+        {}
         virtual ~MatcherMatchStack() = default;
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;

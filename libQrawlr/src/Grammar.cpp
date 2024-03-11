@@ -55,6 +55,14 @@ namespace qrawlr
         return gFinal;
     }
 
+    void Grammar::add_rule(RuleRef rule)
+    {
+        if (m_rules.find(rule->get_name()) != m_rules.end())
+            throw GrammarException("Rule '" + rule->get_name() + "' already defined");
+
+        m_rules[rule->get_name()] = rule;
+    }
+
     void Grammar::load_from_tree(const ParseTreeRef tree)
     {
         ParseTreeNodeRef root = expect_node(tree);
@@ -332,7 +340,7 @@ namespace qrawlr
 
         auto action_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
 
-        Action action(action_name, nullptr);
+        Action action(action_name, {});
 
         for (auto child : get_node(node->get_children()[1])->get_children())
         {
@@ -456,13 +464,6 @@ namespace qrawlr
             throw GrammarException("[*expect_leaf*]: Expected leaf in grammar tree");
             
         return leaf;
-    }
-
-    Grammar Grammar::load_internal_grammar()
-    {
-        // TODO: Implement internal grammar loading
-        Grammar g;
-        return g;
     }
 
     GrammarException Grammar::make_exception(const std::string& message, const Position& pos)

@@ -15,6 +15,10 @@ namespace qrawlr
         }; 
     public:
         Rule();
+        template <typename... Args>
+        Rule(const std::string& name, const qrawlr::Flags<Flags>& rule_flags, Args... args)
+            : MatcherMatchAny(args...), m_name(name), m_rule_flags(rule_flags)
+        {}
         Rule(const Rule&) = default;
         Rule(Rule&&) = default;
         Rule& operator=(const Rule&) = default;

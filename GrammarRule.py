@@ -172,7 +172,7 @@ class Matcher(ABC):
 
         return tree, index
     
-    def _initializers_to_arg_str(self) -> str:
+    def _initializers_to_python_arg_str(self) -> str:
         args = []
         args.append(f"inverted={self.inverted}")
         args.append(f"count_min={self.count_min}")
@@ -180,26 +180,84 @@ class Matcher(ABC):
         args.append(f"look_ahead={self.look_ahead}")
         args.append(f"omit_match={self.omit_match}")
         args.append(f"match_repl={self.match_repl}")
-        args.append(f"actions={self._actions_to_arg_str()}")
+        args.append(f"actions={self._actions_to_python_arg_str()}")
         return f"initializers=MatcherInitializers({', '.join(args)})"
 
-    def _actions_to_arg_str(self) -> str:
+    def _actions_to_python_arg_str(self) -> str:
         triggers = []
         for (trigger_name, action_list) in self.actions.items():
-            triggers.append(f"\"{escape_string(trigger_name)}\": {self._action_list_to_arg_str(action_list)}")
+            triggers.append(f"\"{escape_string(trigger_name)}\": {self._action_list_to_python_arg_str(action_list)}")
         return f"{{{', '.join(triggers)}}}"
     
-    def _action_list_to_arg_str(self, action_list: list[tuple[str, list[tuple[int, None]]]]) -> str:
+    def _action_list_to_python_arg_str(self, action_list: list[tuple[str, list[tuple[int, None]]]]) -> str:
         actions = []
         for (action_name, args) in action_list:
-            actions.append(f"(\"{escape_string(action_name)}\", {self._action_args_to_arg_str(args)})")
+            actions.append(f"(\"{escape_string(action_name)}\", {self._action_args_to_python_arg_str(args)})")
         return f"[{', '.join(actions)}]"
     
-    def _action_args_to_arg_str(self, action_args: list[tuple[int, None]]) -> str:
+    def _action_args_to_python_arg_str(self, action_args: list[tuple[int, None]]) -> str:
         args = []
         for (type_id, value) in action_args:
             args.append(f"({type_id}, \"{value}\")")
         return f"[{', '.join(args)}]"
+
+    def _initializers_to_cpp_arg_str(self) -> str:
+        return f"{self._flags_to_cpp_arg_str()}, {self.count_min}, {self.count_max}, {self._match_repl_to_cpp_arg_str()}, {self._actions_to_cpp_arg_str()}"
+
+    def _flags_to_cpp_arg_str(self) -> str:
+        flags = 0
+        if self.inverted:
+            flags |= (1 << 0)
+        if self.look_ahead:
+            flags |= (1 << 1)
+        #if self.look_behind:
+        #    flags |= (1 << 2)
+        if self.omit_match:
+            flags |= (1 << 3)
+        return f"Flags<Matcher::Flags>::from_raw({flags})"
+    
+    def _match_repl_to_cpp_arg_str(self) -> str:
+        if self.match_repl is None:
+            return "{ }"
+        
+        if self.match_repl[0] == MATCH_REPL_IDENTIFIER:
+            repl_type = "Identifier"
+            value = self.match_repl[1]
+        elif self.match_repl[0] == MATCH_REPL_STRING:
+            repl_type = "String"
+            value = self.match_repl[1]
+        elif self.match_repl[0] == MATCH_REPL_STACK:
+            repl_type = "Stack"
+            value = self.match_repl[1]
+        else:
+            raise GrammarException(f"Unknown match replacement type '{self.match_repl[0]}'")
+
+        return f"MatchReplacement{{ MatchReplacement::Type::{repl_type}, \"{escape_string(value)}\" }}"
+
+    def _actions_to_cpp_arg_str(self) -> str:
+        triggers = []
+        for (trigger_name, action_list) in self.actions.items():
+            triggers.append(f"{{ \"{escape_string(trigger_name)}\", {self._action_list_to_cpp_arg_str(action_list)} }}")
+        return f"std::map<std::string, std::vector<Action>>({{ {', '.join(triggers)} }})"
+    
+    def _action_list_to_cpp_arg_str(self, action_list: list[tuple[str, list[tuple[int, None]]]]) -> str:
+        actions = []
+        for (action_name, args) in action_list:
+            actions.append(f"Action{{ \"{escape_string(action_name)}\", {self._action_args_to_cpp_arg_str(args)} }}")
+        return f"std::vector<Action>({{ {', '.join(actions)} }})"
+
+    def _action_args_to_cpp_arg_str(self, action_args: list[tuple[int, None]]) -> str:
+        args = []
+        for (type_id, value) in action_args:
+            if type_id == ACTION_ARG_TYPE_IDENTIFIER:
+                args.append(f"Action::Arg{{ Action::ArgType::Type::Identifier, \"{escape_string(value)}\" }}")
+            elif type_id == ACTION_ARG_TYPE_STRING:
+                args.append(f"Action::Arg{{ Action::ArgType::String, \"{escape_string(value)}\" }}")
+            elif type_id == ACTION_ARG_TYPE_MATCH:
+                args.append(f"Action::Arg{{ Action::ArgType::Type::Match, \"\" }}")
+            else:
+                raise GrammarException(f"Unknown action argument type '{type_id}'")
+        return f"std::vector<ActionArgument>{{ {', '.join(args)} }}"
 
     def _apply_optional_invert(self, parseData: ParseData, index_old: int, index_new: int, tree: ParseTree) -> tuple[ParseTree, int]:
         if not self.inverted:
@@ -437,6 +495,10 @@ class Matcher(ABC):
     def _generate_python_code(self) -> str:
         raise NotImplementedError("Matcher._generate_python_code() must be implemented by subclasses")
 
+    @abstractmethod
+    def _generate_cpp_code(self) -> str:
+        raise NotImplementedError("Matcher._generate_cpp_code() must be implemented by subclasses")
+
 # .
 class MatcherMatchAnyChar(Matcher):
     def __init__(self, *args, **kwargs) -> None:
@@ -454,7 +516,10 @@ class MatcherMatchAnyChar(Matcher):
         return "."
     
     def _generate_python_code(self) -> str:
-        return f"MatcherMatchAnyChar({self._initializers_to_arg_str()})"
+        return f"MatcherMatchAnyChar({self._initializers_to_python_arg_str()})"
+
+    def _generate_cpp_code(self) -> str:
+        return f"std::make_shared<MatcherMatchAnyChar>({self._initializers_to_cpp_arg_str()})"
 
 class MatcherList(Matcher):
     def __init__(self, options: list[Matcher] = [], *args, **kwargs) -> None:
@@ -466,6 +531,12 @@ class MatcherList(Matcher):
         for option in self.options:
             optionStrs.append(option._generate_python_code())
         return f"[{', '.join(optionStrs)}]"
+
+    def _generate_cpp_code_option_list(self) -> str:
+        optionStrs = []
+        for option in self.options:
+            optionStrs.append(option._generate_cpp_code())
+        return f"std::vector<MatcherRef>({{ {', '.join(optionStrs)} }})"
 
 # (...)
 class MatcherMatchAll(MatcherList):
@@ -495,7 +566,10 @@ class MatcherMatchAll(MatcherList):
         return result
     
     def _generate_python_code(self) -> str:
-        return f"MatcherMatchAll({self._generate_python_code_option_list()}, {self._initializers_to_arg_str()})"
+        return f"MatcherMatchAll({self._generate_python_code_option_list()}, {self._initializers_to_python_arg_str()})"
+
+    def _generate_cpp_code(self) -> str:
+        return f"std::make_shared<MatcherMatchAll>{{ {self._generate_cpp_code_option_list()}, {self._initializers_to_cpp_arg_str()}}}"
 
 # [...]
 class MatcherMatchAny(MatcherList):
@@ -517,7 +591,10 @@ class MatcherMatchAny(MatcherList):
         return result
     
     def _generate_python_code(self) -> str:
-        return f"MatcherMatchAny({self._generate_python_code_option_list()}, {self._initializers_to_arg_str()})"
+        return f"MatcherMatchAny({self._generate_python_code_option_list()}, {self._initializers_to_python_arg_str()})"
+
+    def _generate_cpp_code(self) -> str:
+        return f"std::make_shared<MatcherMatchAny>{{ {self._generate_cpp_code_option_list()}, {self._initializers_to_cpp_arg_str()}}}"
 
 # 'xx'
 class MatcherMatchRange(Matcher):
@@ -541,7 +618,10 @@ class MatcherMatchRange(Matcher):
         return f"'{self.first}{self.last}'"
 
     def _generate_python_code(self) -> str:
-        return f"MatcherMatchRange(\"{escape_string(self.first)}\", \"{escape_string(self.last)}\", {self._initializers_to_arg_str()})"
+        return f"MatcherMatchRange(\"{escape_string(self.first)}\", \"{escape_string(self.last)}\", {self._initializers_to_python_arg_str()})"
+
+    def _generate_cpp_code(self) -> str:
+        return f"std::make_shared<MatcherMatchRange>(\"{escape_string(self.first)}\", \"{escape_string(self.last)}\", {self._initializers_to_cpp_arg_str()})"
 
 # "..."
 class MatcherMatchExact(Matcher):
@@ -561,7 +641,10 @@ class MatcherMatchExact(Matcher):
         return f"\"{escape_string(self.value)}\""
     
     def _generate_python_code(self) -> str:
-        return f"MatcherMatchExact(\"{escape_string(self.value)}\", {self._initializers_to_arg_str()})"
+        return f"MatcherMatchExact(\"{escape_string(self.value)}\", {self._initializers_to_python_arg_str()})"
+
+    def _generate_cpp_code(self) -> str:
+        return f"std::make_shared<MatcherMatchExact>(\"{escape_string(self.value)}\", {self._initializers_to_cpp_arg_str()})"
 
 class MatcherMatchRule(Matcher):
     def __init__(self, rulename: str, *args, **kwargs) -> None:
@@ -581,7 +664,10 @@ class MatcherMatchRule(Matcher):
         return self.rulename
     
     def _generate_python_code(self) -> str:
-        return f"MatcherMatchRule(\"{escape_string(self.rulename)}\", {self._initializers_to_arg_str()})"
+        return f"MatcherMatchRule(\"{escape_string(self.rulename)}\", {self._initializers_to_python_arg_str()})"
+
+    def _generate_cpp_code(self) -> str:
+        return f"std::make_shared<MatcherMatchRule>(\"{escape_string(self.rulename)}\", {self._initializers_to_cpp_arg_str()})"
 
 class MatcherMatchStack(Matcher):
     def __init__(self, name: str, index: int, *args, **kwargs) -> None:
@@ -607,7 +693,10 @@ class MatcherMatchStack(Matcher):
         return f":{escape_string(self.stack_name)}.{self.index}:"
 
     def _generate_python_code(self) -> str:
-        return f"MatcherMatchStack(\"{escape_string(self.stack_name)}\", {self.index}, {self._initializers_to_arg_str()})"
+        return f"MatcherMatchStack(\"{escape_string(self.stack_name)}\", {self.index}, {self._initializers_to_python_arg_str()})"
+
+    def _generate_cpp_code(self) -> str:
+        return f"std::make_shared<MatcherMatchStack>(\"{escape_string(self.stack_name)}\", {self.index}, {self._initializers_to_cpp_arg_str()})"
 
 class Rule(MatcherMatchAny):
     def __init__(self, name=None, anonymous=False, fuse_children=False, *args, **kwargs) -> None:
@@ -628,7 +717,18 @@ class Rule(MatcherMatchAny):
         args.append(f"anonymous={self.anonymous}")
         args.append(f"fuse_children={self.fuse_children}")
         args.append(f"options={self._generate_python_code_option_list()}")
-        return f"Rule({', '.join(args)}, {self._initializers_to_arg_str()})"
+        return f"Rule({', '.join(args)}, {self._initializers_to_python_arg_str()})"
+
+    def _generate_cpp_code(self) -> str:
+        return f"std::make_shared<Rule>(\"{self.name}\", {self._rule_flags_to_cpp_arg_str()}, {self._generate_cpp_code_option_list()}, {self._initializers_to_cpp_arg_str()})"
+
+    def _rule_flags_to_cpp_arg_str(self) -> str:
+        flags = 0
+        if self.anonymous:
+            flags |= (1 << 0)
+        if self.fuse_children:
+            flags |= (1 << 1)
+        return f"Flags<Rule::Flags>::from_raw({flags})"
 
     def __fuse_children(self, tree: ParseTree) -> None:
         if tree is None:
