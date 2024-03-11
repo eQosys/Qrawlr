@@ -16,7 +16,7 @@ namespace qrawlr
         ParseData data(text, filename, m_rules);
 
         auto result = it->second->match(data, 0);
-        result.position = data.get_position(result.position.index);
+        result.pos_end = data.get_position(result.pos_end.index);
 
         if (auto node = get_node(result.tree); node != nullptr)
             node->set_name(rule_name);
@@ -47,8 +47,8 @@ namespace qrawlr
         Grammar g = load_internal_grammar();
         auto result = g.apply_to(text, "Grammar", filename);
         
-        if (result.tree == nullptr || (size_t)result.position.index < text.size())
-            throw GrammarException("Failed to parse grammar file '" + filename + "'");
+        if (result.tree == nullptr || (size_t)result.pos_end.index < text.size())
+            throw GrammarException("Failed to parse grammar file '" + filename + "'", filename + ":" + std::to_string(result.pos_end.line) + ":" + std::to_string(result.pos_end.column));
 
         Grammar gFinal;
         gFinal.load_from_tree(result.tree);

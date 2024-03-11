@@ -15,7 +15,7 @@ namespace qrawlr
     struct MatchResult
     {
         ParseTreeRef tree;
-        Position position;
+        Position pos_end;
     };
 
     class Matcher
@@ -58,6 +58,7 @@ namespace qrawlr
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const = 0;
         virtual std::string to_string_impl() const = 0;
+        virtual const char* get_matcher_name() const = 0;
     public:
         virtual std::string gen_cpp_code() const = 0;
     protected:
@@ -74,11 +75,13 @@ namespace qrawlr
     class MatcherMatchAnyChar : public Matcher
     {
     public:
+        using Matcher::Matcher;
         MatcherMatchAnyChar() = default;
         virtual ~MatcherMatchAnyChar() = default;
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
         virtual std::string to_string_impl() const override;
+        virtual const char* get_matcher_name() const override { return "MatcherMatchAnyChar"; }
     public:
         virtual std::string gen_cpp_code() const override;
     };
@@ -109,6 +112,7 @@ namespace qrawlr
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
         virtual std::string to_string_impl() const override;
+        virtual const char* get_matcher_name() const override { return "MatcherMatchAll"; }
     public:
         virtual std::string gen_cpp_code() const override;
     };
@@ -122,6 +126,7 @@ namespace qrawlr
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
         virtual std::string to_string_impl() const override;
+        virtual const char* get_matcher_name() const override { return "MatcherMatchAny"; }
     public:
         virtual std::string gen_cpp_code() const override;
     };
@@ -139,6 +144,7 @@ namespace qrawlr
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
         virtual std::string to_string_impl() const override;
+        virtual const char* get_matcher_name() const override { return "MatcherMatchRange"; }
     public:
         virtual std::string gen_cpp_code() const override;
     private:
@@ -159,6 +165,7 @@ namespace qrawlr
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
         virtual std::string to_string_impl() const override;
+        virtual const char* get_matcher_name() const override { return "MatcherMatchExact"; }
     public:
         virtual std::string gen_cpp_code() const override;
     private:
@@ -178,8 +185,11 @@ namespace qrawlr
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
         virtual std::string to_string_impl() const override;
+        virtual const char* get_matcher_name() const override { return "MatcherMatchRule"; }
     public:
         virtual std::string gen_cpp_code() const override;
+    public:
+        const std::string& get_rule_name() const { return m_rule_name; }
     private:
         std::string m_rule_name;
     };
@@ -197,6 +207,7 @@ namespace qrawlr
     protected:
         virtual MatchResult match_impl(ParseData& data, int index) const override;
         virtual std::string to_string_impl() const override;
+        virtual const char* get_matcher_name() const override { return "MatcherMatchStack"; }
     public:
         virtual std::string gen_cpp_code() const override;
     private:

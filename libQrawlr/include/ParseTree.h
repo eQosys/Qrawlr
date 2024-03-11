@@ -22,6 +22,7 @@ namespace qrawlr
     public:
         const Position& get_pos_begin() const { return m_pos_begin; }
         const Position& get_pos_end() const { return m_pos_end; }
+        void set_pos_end(const Position& pos_end) { m_pos_end = pos_end; }
     protected:
         std::string get_optional_verbose_info(bool verbose) const;
     public:
@@ -76,6 +77,7 @@ namespace qrawlr
     protected:
         virtual void to_digraph_impl(Digraph& graph, bool verbose) const override;
     public:
+        std::string& get_value() { return m_value; }
         const std::string& get_value() const { return m_value; }
     public:
         static std::shared_ptr<ParseTreeExactMatch> make(const std::string& value, const Position& pos_begin, const Position& pos_end) { return std::make_shared<ParseTreeExactMatch>(value, pos_begin, pos_end); }

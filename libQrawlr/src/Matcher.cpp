@@ -32,15 +32,13 @@ namespace qrawlr
         {
             sub_result = match_impl(data, index);
             if (m_flags.is_set(Flags::Invert))
-                sub_result = apply_invert(data, index_old, sub_result.position.index, sub_result.tree);
-
-            index = sub_result.position.index;
+                sub_result = apply_invert(data, index_old, sub_result.pos_end.index, sub_result.tree);
 
             if (!sub_result.tree)
                 break;
 
             ++match_count;
-
+            index = sub_result.pos_end.index;
             base_tree->add_child(sub_result.tree, m_flags.is_set(Flags::OmitMatch));
 
             if (match_count >= m_count_max)
@@ -55,15 +53,20 @@ namespace qrawlr
             return { nullptr, { index_old, 0, 0 } };
         }
 
-        if (data.get_farthest_match_index() < index)
-            data.set_farthest_match_index(index);
-
         if (m_flags.is_set(Flags::LookAhead))
             index = index_old;
+
+        if (data.get_farthest_match_index() < index)
+            data.set_farthest_match_index(index);
 
         run_actions_for_trigger(TRIGGER_ON_MATCH, tree, data, index_old);
 
         tree = apply_optional_match_repl(tree, data, index_old);
+
+        printf("%d -- %s", index, get_matcher_name());
+        if (auto matchRule = dynamic_cast<const MatcherMatchRule*>(this); matchRule)
+            printf(" -> %s", matchRule->get_rule_name().c_str());
+        printf("\n");
 
         return { tree, { index, 0, 0 } };
     }
@@ -241,7 +244,11 @@ namespace qrawlr
 
     void Matcher::run_actions_for_trigger(const std::string& trigger_name, const ParseTreeRef tree, ParseData& data, int index) const
     {
-        auto& trigger = m_actions.at(trigger_name);
+        auto it = m_actions.find(trigger_name);
+        if (it == m_actions.end())
+            return;
+        
+        auto& trigger = it->second;
 
         for (const auto& action : trigger)
             action.run(tree, data, index);
@@ -300,7 +307,7 @@ namespace qrawlr
             if (!result.tree)
                 return { nullptr, { index_old, 0, 0 } };
             children.push_back(result.tree);
-            index = result.position.index;
+            index = result.pos_end.index;
         }
 
         auto node = ParseTreeNode::make(data.get_position(index_old));
@@ -342,7 +349,7 @@ namespace qrawlr
             auto result = matcher->match(data, index);
             if (result.tree)
                 return result;
-            index = result.position.index;
+            index = result.pos_end.index;
         }
 
         return { nullptr, { index, 0, 0 } };

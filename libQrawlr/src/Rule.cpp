@@ -27,9 +27,38 @@ namespace qrawlr
 
     void Rule::fuse_children(ParseTreeRef tree) const
     {
-        (void)tree; // Currently unused
+        auto node = std::dynamic_pointer_cast<ParseTreeNode>(tree);
 
-        throw GrammarException("Rule::fuse_children() not implemented");
+        if (!node)
+            return;
+
+        int i = 0;
+        std::shared_ptr<ParseTreeExactMatch> prevLeaf;
+        while (i < node->get_children().size())
+        {
+            auto leaf = std::dynamic_pointer_cast<ParseTreeExactMatch>(node->get_children()[i]);
+            if (leaf)
+            {
+                if (!prevLeaf)
+                {
+                    prevLeaf = leaf;
+                }
+                else
+                {
+                    prevLeaf->get_value() += leaf->get_value();
+                    if (prevLeaf->get_pos_end().index < leaf->get_pos_end().index)
+                        prevLeaf->set_pos_end(leaf->get_pos_end());
+                    node->get_children().erase(node->get_children().begin() + i);
+                    continue;
+                }
+            }
+            else
+            {
+                prevLeaf.reset();
+            }
+
+            ++i;
+        }
     }
 
 } // namespace qrawlr

@@ -49,26 +49,35 @@ int main(int argc, char** argv)
     std::string input_file = argv[3];
     std::string output_file = argv[4];
 
-    qrawlr::Grammar grammar = qrawlr::Grammar::load_from_file(grammar_file);
+    try
+    {
+        qrawlr::Grammar grammar = qrawlr::Grammar::load_from_file(grammar_file);
 
-    if (mode == "verify")
-    {
-        printf("TODO: verify\n");
-        return 1;
+        if (mode == "verify")
+        {
+            printf("TODO: verify\n");
+            return 1;
+        }
+        else if (mode == "parse")
+        {
+            printf("TODO: parse\n");
+            return 1;
+        }
+        else if (mode == "render")
+        {
+            printf("TODO: render\n");
+            return 1;
+        }
+        else
+        {
+            printf("Invalid mode: %s\n", mode.c_str());
+            return 1;
+        }
     }
-    else if (mode == "parse")
+    catch (const std::exception& e)
     {
-        printf("TODO: parse\n");
+        printf("Error: %s\n", e.what());
         return 1;
-    }
-    else if (mode == "render")
-    {
-        printf("TODO: render\n");
-        return 1;
-    }
-    else
-    {
-        printf("Invalid mode: %s\n", mode.c_str());
     }
 
     return 0;

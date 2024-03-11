@@ -218,7 +218,7 @@ class Matcher(ABC):
     
     def _match_repl_to_cpp_arg_str(self) -> str:
         if self.match_repl is None:
-            return "{ }"
+            return "MatchReplacement{ }"
         
         if self.match_repl[0] == MATCH_REPL_IDENTIFIER:
             repl_type = "Identifier"
@@ -238,7 +238,13 @@ class Matcher(ABC):
         triggers = []
         for (trigger_name, action_list) in self.actions.items():
             triggers.append(f"{{ \"{escape_string(trigger_name)}\", {self._action_list_to_cpp_arg_str(action_list)} }}")
-        return f"std::map<std::string, std::vector<Action>>({{ {', '.join(triggers)} }})"
+
+        if len(triggers) == 0:
+            triggers_str = ""
+        else:
+            triggers_str = f"{{ {', '.join(triggers)} }}"
+
+        return f"std::map<std::string, std::vector<Action>>({triggers_str})"
     
     def _action_list_to_cpp_arg_str(self, action_list: list[tuple[str, list[tuple[int, None]]]]) -> str:
         actions = []
@@ -257,7 +263,7 @@ class Matcher(ABC):
                 args.append(f"Action::Arg{{ Action::ArgType::Type::Match, \"\" }}")
             else:
                 raise GrammarException(f"Unknown action argument type '{type_id}'")
-        return f"std::vector<ActionArgument>{{ {', '.join(args)} }}"
+        return f"std::vector<Action::Arg>({{ {', '.join(args)} }})"
 
     def _apply_optional_invert(self, parseData: ParseData, index_old: int, index_new: int, tree: ParseTree) -> tuple[ParseTree, int]:
         if not self.inverted:
@@ -569,7 +575,7 @@ class MatcherMatchAll(MatcherList):
         return f"MatcherMatchAll({self._generate_python_code_option_list()}, {self._initializers_to_python_arg_str()})"
 
     def _generate_cpp_code(self) -> str:
-        return f"std::make_shared<MatcherMatchAll>{{ {self._generate_cpp_code_option_list()}, {self._initializers_to_cpp_arg_str()}}}"
+        return f"std::make_shared<MatcherMatchAll>({self._generate_cpp_code_option_list()}, {self._initializers_to_cpp_arg_str()})"
 
 # [...]
 class MatcherMatchAny(MatcherList):
@@ -594,7 +600,7 @@ class MatcherMatchAny(MatcherList):
         return f"MatcherMatchAny({self._generate_python_code_option_list()}, {self._initializers_to_python_arg_str()})"
 
     def _generate_cpp_code(self) -> str:
-        return f"std::make_shared<MatcherMatchAny>{{ {self._generate_cpp_code_option_list()}, {self._initializers_to_cpp_arg_str()}}}"
+        return f"std::make_shared<MatcherMatchAny>({self._generate_cpp_code_option_list()}, {self._initializers_to_cpp_arg_str()})"
 
 # 'xx'
 class MatcherMatchRange(Matcher):
