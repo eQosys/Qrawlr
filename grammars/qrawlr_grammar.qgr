@@ -228,5 +228,5 @@ AlnumChar(hidden): [ AlphaChar DecChar ]
 Newline(hidden): "\n"
 Whitespace(fuse): [ " " "\t" ]+
 
-\\ Whitespace or Newline with optional comment
+\\ Whitespace or Newline with optional Comment
 WoNwoC(hidden): [ Whitespace_ Newline_ Comment ]+

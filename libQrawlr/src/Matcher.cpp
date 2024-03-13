@@ -7,11 +7,14 @@
 
 namespace qrawlr
 {
+
     // -------------------- MATCHER -------------------- //
     Matcher::Matcher()
-        : m_flags(),
-        m_count_min(1), m_count_max(1),
-        m_match_repl(), m_actions()
+        : Matcher(
+            qrawlr::Flags<Flags>(),
+            1, 1,
+            MatchReplacement(), std::map<std::string, std::vector<Action>>()
+        )
     {}
 
     Matcher::Matcher(const qrawlr::Flags<Flags>& flags, int count_min, int count_max, const MatchReplacement& match_repl, const std::map<std::string, std::vector<Action>>& actions)
@@ -41,7 +44,7 @@ namespace qrawlr
             index = sub_result.pos_end.index;
             base_tree->add_child(sub_result.tree, m_flags.is_set(Flags::OmitMatch));
 
-            if (match_count >= m_count_max)
+            if (match_count == m_count_max)
                 break;
         }
         ParseTreeRef tree = base_tree;
@@ -62,11 +65,6 @@ namespace qrawlr
         run_actions_for_trigger(TRIGGER_ON_MATCH, tree, data, index_old);
 
         tree = apply_optional_match_repl(tree, data, index_old);
-
-        printf("%d -- %s", index, get_matcher_name());
-        if (auto matchRule = dynamic_cast<const MatcherMatchRule*>(this); matchRule)
-            printf(" -> %s", matchRule->get_rule_name().c_str());
-        printf("\n");
 
         return { tree, { index, 0, 0 } };
     }
@@ -349,7 +347,6 @@ namespace qrawlr
             auto result = matcher->match(data, index);
             if (result.tree)
                 return result;
-            index = result.pos_end.index;
         }
 
         return { nullptr, { index, 0, 0 } };
@@ -384,12 +381,12 @@ namespace qrawlr
         if (data.eof(index))
             return { nullptr, { index, 0, 0 } };
 
-        int index_next = index + 1;
-
         std::string text = data.get_text().substr(index, 1);
 
         if (text < m_first || text > m_last)
             return { nullptr, { index, 0, 0 } };
+
+        int index_next = index + 1;
 
         return { ParseTreeExactMatch::make(text, data.get_position(index), data.get_position(index_next)), { index_next, 0, 0 } };
     }
