@@ -10,6 +10,8 @@
 #include "ParseData.h"
 #include "MatchReplacement.h"
 
+#include <stdexcept>
+
 namespace qrawlr
 {
     struct MatchResult
@@ -93,7 +95,11 @@ namespace qrawlr
         template <typename... Args>
         MatcherList(const std::vector<MatcherRef>& matchers, Args... args)
             : Matcher(args...), m_matchers(matchers)
-        {}
+        {
+            for (auto& matcher : m_matchers)
+                if (!matcher)
+                    throw std::runtime_error("MatcherList: matcher is nullptr");
+        }
         virtual ~MatcherList() = default;
     public:
         void set_matchers(const std::vector<MatcherRef>& matchers) { m_matchers = matchers; }

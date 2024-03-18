@@ -23,7 +23,7 @@ namespace qrawlr
     public:
         void add_rule(RuleRef rule);
     private:
-        void load_from_tree(const ParseTreeRef tree);
+        void load_from_tree(const ParseTreeRef tree, const std::string& filename);
     private:
         RuleRef load_rule_definition_from_tree(const ParseTreeRef tree);
         RuleRef load_rule_header_from_tree(const ParseTreeRef tree);

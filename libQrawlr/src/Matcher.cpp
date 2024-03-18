@@ -37,11 +37,12 @@ namespace qrawlr
             if (m_flags.is_set(Flags::Invert))
                 sub_result = apply_invert(data, index, sub_result.pos_end.index, sub_result.tree);
 
+            index = sub_result.pos_end.index;
+
             if (!sub_result.tree)
                 break;
-
             ++match_count;
-            index = sub_result.pos_end.index;
+            
             base_tree->add_child(sub_result.tree, m_flags.is_set(Flags::OmitMatch));
 
             if (match_count == m_count_max)

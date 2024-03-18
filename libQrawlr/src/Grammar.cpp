@@ -56,16 +56,22 @@ namespace qrawlr
     {
         Grammar g = load_internal_grammar();
 
+        printf("- - - - - - - - - -  INTERNAL GRAMMAR  - - - - - - - - - -\n");
         printf("%s\n", g.to_string().c_str());
+        printf("- - - - - - - - - - - - - - - - - - -  - - - - - - - - - -\n");
 
         auto result = g.apply_to(text, "Grammar", filename);
         
-        if (result.tree == nullptr || (size_t)result.pos_end.index < text.size())
-            throw GrammarException("Failed to parse grammar file '" + filename + "'", filename + ":" + std::to_string(result.pos_end.line) + ":" + std::to_string(result.pos_end.column));
+        if (result.tree == nullptr || (size_t)result.pos_end.index + 1 < text.size())
+            throw GrammarException("Failed to parse provided grammar file", filename + ":" + std::to_string(result.pos_end.line) + ":" + std::to_string(result.pos_end.column));
 
-        Grammar gFinal;
-        gFinal.load_from_tree(result.tree);
-        return gFinal;
+        g.load_from_tree(result.tree, filename);
+
+        printf("---------- LOADED GRAMMAR ----------\n");
+        printf("%s\n", g.to_string().c_str());
+        printf("------------------------------------\n");
+
+        return g;
     }
 
     void Grammar::add_rule(RuleRef rule)
@@ -76,8 +82,11 @@ namespace qrawlr
         m_rules[rule->get_name()] = rule;
     }
 
-    void Grammar::load_from_tree(const ParseTreeRef tree)
+    void Grammar::load_from_tree(const ParseTreeRef tree, const std::string& filename)
     {
+        m_filename = filename;
+        m_rules.clear();
+
         ParseTreeNodeRef root = expect_node(tree);
 
         for (auto& child : root->get_children())
@@ -111,7 +120,7 @@ namespace qrawlr
 
         auto rule = std::make_shared<Rule>();
 
-        rule->set_name(get_leaf(get_node(get_node(node->get_children()[0])->get_children()[0]))->get_value());
+        rule->set_name(get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value());
 
         if (m_rules.find(rule->get_name()) != m_rules.end())
             throw make_exception("Rule '" + rule->get_name() + "' already defined", node->get_pos_begin());
@@ -134,7 +143,7 @@ namespace qrawlr
     {
         auto node = expect_node(tree, "RuleModifier");
 
-        auto modifier_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
+        auto modifier_name = get_leaf(node->get_children()[0])->get_value();
 
         if (modifier_name == "hidden")
             rule->get_rule_flags().set(Rule::Flags::Anonymous);
@@ -198,7 +207,7 @@ namespace qrawlr
         {
             std::vector<MatcherRef> matchers;
             for (auto& child : node->get_children())
-                matchers.push_back(load_matcher_from_tree(child));
+                matchers.push_back(load_full_matcher_from_tree(child));
             
             auto matcher = std::make_shared<MatcherMatchAll>();
             matcher->set_matchers(matchers);
@@ -208,7 +217,7 @@ namespace qrawlr
         {
             std::vector<MatcherRef> matchers;
             for (auto& child : node->get_children())
-                matchers.push_back(load_matcher_from_tree(child));
+                matchers.push_back(load_full_matcher_from_tree(child));
             
             auto matcher = std::make_shared<MatcherMatchAny>(matchers);
             matcher->set_matchers(matchers);
@@ -221,13 +230,25 @@ namespace qrawlr
             return std::make_shared<MatcherMatchRange>(first, last);
         }
         else if (node->get_name() == "MatchExact")
-            return std::make_shared<MatcherMatchExact>(load_string_from_tree(node->get_children()[0]));
+        {
+            auto value = load_string_from_tree(node->get_children()[0]);
+            return std::make_shared<MatcherMatchExact>(value);
+        }
         else if (node->get_name() == "MatchRule")
-            return nullptr;
+        {
+            auto& rule_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
+            return std::make_shared<MatcherMatchRule>(rule_name);
+        }
         else if (node->get_name() == "MatchStack")
-            return nullptr;
+        {
+            auto& stack_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
+            auto index = load_integer_from_tree(node->get_children()[1]);
+            return std::make_shared<MatcherMatchStack>(stack_name, index);
+        }
         else
+        {
             throw make_exception("Unknown matcher type '" + node->get_name() + "'", node->get_pos_begin());
+        }
     }
 
     void Grammar::load_matcher_modifiers_from_tree(MatcherRef matcher, const ParseTreeRef tree)
