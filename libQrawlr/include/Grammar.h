@@ -16,6 +16,7 @@ namespace qrawlr
         ~Grammar() = default;
     public:
         MatchResult apply_to(const std::string& text, const std::string& rule_name, const std::string& filename) const;
+        std::string to_string() const;
     public:
         static Grammar load_from_file(const std::string& filename);
         static Grammar load_from_text(const std::string& text, const std::string& filename);

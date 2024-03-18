@@ -36,6 +36,16 @@ namespace qrawlr
         return result;
     }
 
+    std::string Grammar::to_string() const
+    {
+        std::string result;
+
+        for (const auto& rule : m_rules)
+            result += rule.second->to_string() + "\n";
+
+        return result;
+    }
+
     Grammar Grammar::load_from_file(const std::string& filename)
     {
         std::string text = read_file(filename);
@@ -45,6 +55,9 @@ namespace qrawlr
     Grammar Grammar::load_from_text(const std::string& text, const std::string& filename)
     {
         Grammar g = load_internal_grammar();
+
+        printf("%s\n", g.to_string().c_str());
+
         auto result = g.apply_to(text, "Grammar", filename);
         
         if (result.tree == nullptr || (size_t)result.pos_end.index < text.size())

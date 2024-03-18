@@ -138,7 +138,18 @@ MatcherModifierOmitMatch: "_"_
 \\ ---------------- MATCHER ACTIONS ----------------
 
 MatcherActions:
-    "{"_ WoNwoC? ( MatcherTrigger ( WoNwoC? ","_ WoNwoC? MatcherTrigger )* WoNwoC? )? "}"_
+    (
+        "{"_ WoNwoC?
+        (
+            MatcherTrigger
+            (
+                WoNwoC? ","_ WoNwoC?
+                MatcherTrigger
+            )*
+            WoNwoC?
+        )?
+        "}"_{ onFail: fail("Expected '}'") }
+    )
     ""_
 
 MatcherTrigger:

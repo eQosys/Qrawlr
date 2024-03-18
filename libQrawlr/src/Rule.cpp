@@ -17,7 +17,32 @@ namespace qrawlr
 
     std::string Rule::to_string_impl() const
     {
-        throw GrammarException("Rule::to_string_impl() not implemented");
+        std::string header_str;
+
+        header_str += m_name;
+
+        {
+            std::vector<std::string> flags;
+            if (m_rule_flags.is_set(Flags::Anonymous))
+                flags.push_back("hidden");
+            if (m_rule_flags.is_set(Flags::FuseChildren))
+                flags.push_back("fuse");
+
+            if (!flags.empty())
+            {
+                header_str += "(";
+                for (size_t i = 0; i < flags.size(); ++i)
+                {
+                    if (i > 0)
+                        header_str += " ";
+                    header_str += flags[i];
+                }
+                header_str += ")";
+            }
+        }
+
+        header_str += ": ";
+        return header_str + MatcherMatchAny::to_string_impl();
     }
 
     std::string Rule::gen_cpp_code() const

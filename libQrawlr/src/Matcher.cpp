@@ -35,7 +35,7 @@ namespace qrawlr
         {
             sub_result = match_impl(data, index);
             if (m_flags.is_set(Flags::Invert))
-                sub_result = apply_invert(data, index_old, sub_result.pos_end.index, sub_result.tree);
+                sub_result = apply_invert(data, index, sub_result.pos_end.index, sub_result.tree);
 
             if (!sub_result.tree)
                 break;
@@ -175,6 +175,8 @@ namespace qrawlr
     {
         std::string result;
 
+        result += "(";
+
         for (const auto& arg : args)
         {
             if (arg.type == Action::ArgType::None)
@@ -192,17 +194,19 @@ namespace qrawlr
         if (!args.empty())
             result.pop_back();
 
+        result += ")";
+
         return result;
     }
 
     MatchResult Matcher::apply_invert(const ParseData& data, int index_old, int index_new, ParseTreeRef tree) const
     {
-        int index_next = index_new;
+        int index_next = index_old + 1;
 
         if (tree == nullptr && !data.eof(index_old))
             return { ParseTreeExactMatch::make(data.get_text().substr(index_old, 1), data.get_position(index_old), data.get_position(index_next)), { index_next, 0, 0 } };
 
-        return { tree, { index_old, 0, 0 } };
+        return { nullptr, { index_old, 0, 0 } };
     }
 
     ParseTreeRef Matcher::apply_optional_match_repl(ParseTreeRef tree, ParseData& data, int index) const
@@ -386,7 +390,7 @@ namespace qrawlr
         if (text < m_first || text > m_last)
             return { nullptr, { index, 0, 0 } };
 
-        int index_next = index + 1;
+        int index_next = index + text.size();
 
         return { ParseTreeExactMatch::make(text, data.get_position(index), data.get_position(index_next)), { index_next, 0, 0 } };
     }
