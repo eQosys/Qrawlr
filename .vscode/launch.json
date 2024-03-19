@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceFolder}/bin/Debug/qrawlr",
-            "args": [ "render", "grammars/algebra_grammar.qgr:GlobalCode", "test_files/algebra_expression.txt", "output/algebra_expression.txt.pdf" ],
+            "args": [ "render", "grammars/algebra_grammar.qgr:Expression", "test_files/algebra_expression.txt", "output/algebra_expression.txt.pdf" ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build"
         }

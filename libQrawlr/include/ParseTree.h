@@ -8,8 +8,6 @@
 
 namespace qrawlr
 {
-    typedef int Digraph;
-
     class ParseTree
     {
     public:
@@ -18,7 +16,7 @@ namespace qrawlr
         ParseTree(const Position& pos_begin, const Position& pos_end);
         virtual ~ParseTree() = default;
     public:
-        Digraph to_digraph(bool verbose) const;
+        std::string to_digraph_str(bool verbose) const;
     public:
         const Position& get_pos_begin() const { return m_pos_begin; }
         const Position& get_pos_end() const { return m_pos_end; }
@@ -28,7 +26,7 @@ namespace qrawlr
     public:
         virtual std::string to_string() const = 0;
     protected:
-        virtual void to_digraph_impl(Digraph& graph, bool verbose) const = 0;
+        virtual void to_digraph_impl(std::string& graph, bool verbose) const = 0;
     protected:
         int m_id;
         Position m_pos_begin;
@@ -50,7 +48,7 @@ namespace qrawlr
     public:
         virtual std::string to_string() const override;
     protected:
-        virtual void to_digraph_impl(Digraph& graph, bool verbose) const override;
+        virtual void to_digraph_impl(std::string& graph, bool verbose) const override;
     public:
         void add_child(ParseTreeRef child, bool omit_match = false);
         void set_name(const std::string& name) { m_name = name; }
@@ -75,7 +73,7 @@ namespace qrawlr
     public:
         virtual std::string to_string() const override;
     protected:
-        virtual void to_digraph_impl(Digraph& graph, bool verbose) const override;
+        virtual void to_digraph_impl(std::string& graph, bool verbose) const override;
     public:
         std::string& get_value() { return m_value; }
         const std::string& get_value() const { return m_value; }

@@ -35,7 +35,7 @@ namespace qrawlr
         {
             sub_result = match_impl(data, index);
             if (m_flags.is_set(Flags::Invert))
-                sub_result = apply_invert(data, index, sub_result.pos_end.index, sub_result.tree);
+                sub_result = apply_invert(data, index, sub_result.tree);
 
             index = sub_result.pos_end.index;
 
@@ -200,7 +200,7 @@ namespace qrawlr
         return result;
     }
 
-    MatchResult Matcher::apply_invert(const ParseData& data, int index_old, int index_new, ParseTreeRef tree) const
+    MatchResult Matcher::apply_invert(const ParseData& data, int index_old, ParseTreeRef tree) const
     {
         int index_next = index_old + 1;
 

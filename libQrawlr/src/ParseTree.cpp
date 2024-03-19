@@ -1,5 +1,7 @@
 #include "ParseTree.h"
 
+#include "EscapeString.h"
+
 namespace qrawlr
 {
     // -------------------- ParseTree -------------------- //
@@ -19,11 +21,14 @@ namespace qrawlr
         m_pos_begin(pos_begin), m_pos_end(pos_end)
     {}
 
-    Digraph ParseTree::to_digraph(bool verbose) const
+    std::string ParseTree::to_digraph_str(bool verbose) const
     {
-        // TODO: Proper implementation
-        Digraph graph = 0;
+        std::string graph;
+        
+        graph += "digraph {\n\tgraph [rankdir=LR]\n";
         to_digraph_impl(graph, verbose);
+        graph += "}\n";
+
         return graph;
     }
 
@@ -32,14 +37,14 @@ namespace qrawlr
         if (!verbose)
             return "";
 
-        std::string info = "\\n";
-        info += m_pos_begin.line;
+        std::string info = "\n";
+        info += std::to_string(m_pos_begin.line);
         info += ":";
-        info += m_pos_begin.column;
+        info += std::to_string(m_pos_begin.column);
         info += " -> ";
-        info += m_pos_end.line;
+        info += std::to_string(m_pos_end.line);
         info += ":";
-        info += m_pos_end.column;
+        info += std::to_string(m_pos_end.column);
 
         return info;
     }
@@ -60,12 +65,27 @@ namespace qrawlr
         return result;
     }
 
-    void ParseTreeNode::to_digraph_impl(Digraph& graph, bool verbose) const
+    void ParseTreeNode::to_digraph_impl(std::string& graph, bool verbose) const
     {
-        // TODO: Proper implementation
         std::string text;
         text += m_name;
         text += get_optional_verbose_info(verbose);
+
+        graph += "\t";
+        graph += std::to_string(m_id);
+        graph += " [label=\"";
+        graph += escape_string(text);
+        graph += "\" shape=ellipse]\n";
+
+        for (auto& child : m_children)
+        {
+            child->to_digraph_impl(graph, verbose);
+            graph += "\t";
+            graph += std::to_string(m_id);
+            graph += " -> ";
+            graph += std::to_string(child->m_id);
+            graph += "\n";
+        }
     }
 
     void ParseTreeNode::add_child(ParseTreeRef child, bool omit_match)
@@ -98,12 +118,19 @@ namespace qrawlr
         return m_value;
     }
 
-    void ParseTreeExactMatch::to_digraph_impl(Digraph& graph, bool verbose) const
+    void ParseTreeExactMatch::to_digraph_impl(std::string& graph, bool verbose) const
     {
-        // TODO: Proper implementation
         std::string text;
+        text += "\"";
         text += m_value;
+        text += "\"";
         text += get_optional_verbose_info(verbose);
+
+        graph += "\t";
+        graph += std::to_string(m_id);
+        graph += " [label=\"";
+        graph += escape_string(text);
+        graph += "\" shape=plaintext]\n";
     }
 
 } // namespace qrawlr

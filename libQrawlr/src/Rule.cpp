@@ -57,7 +57,7 @@ namespace qrawlr
         if (!node)
             return;
 
-        int i = 0;
+        size_t i = 0;
         std::shared_ptr<ParseTreeExactMatch> prevLeaf;
         while (i < node->get_children().size())
         {

@@ -20,6 +20,7 @@ add_library(
     "src/ParseData.cpp"
     "src/ParseTree.cpp"
     "src/FileReader.cpp"
+    "src/FileWriter.cpp"
     "src/EscapeString.cpp"
     "src/gen/InternalGrammarLoader.cpp"
 )

@@ -16,7 +16,7 @@ namespace qrawlr
         ParseData data(text, filename, m_rules);
 
         auto result = it->second->match(data, 0);
-        result.pos_end = data.get_position(result.pos_end.index);
+        result.pos_end = data.get_position(data.get_farthest_match_index());
 
         if (auto node = get_node(result.tree); node != nullptr)
             node->set_name(rule_name);
@@ -56,20 +56,12 @@ namespace qrawlr
     {
         Grammar g = load_internal_grammar();
 
-        printf("- - - - - - - - - -  INTERNAL GRAMMAR  - - - - - - - - - -\n");
-        printf("%s\n", g.to_string().c_str());
-        printf("- - - - - - - - - - - - - - - - - - -  - - - - - - - - - -\n");
-
         auto result = g.apply_to(text, "Grammar", filename);
         
-        if (result.tree == nullptr || (size_t)result.pos_end.index + 1 < text.size())
+        if (result.tree == nullptr || (size_t)result.pos_end.index < text.size())
             throw GrammarException("Failed to parse provided grammar file", filename + ":" + std::to_string(result.pos_end.line) + ":" + std::to_string(result.pos_end.column));
 
         g.load_from_tree(result.tree, filename);
-
-        printf("---------- LOADED GRAMMAR ----------\n");
-        printf("%s\n", g.to_string().c_str());
-        printf("------------------------------------\n");
 
         return g;
     }

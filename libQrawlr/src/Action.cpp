@@ -8,7 +8,7 @@
 namespace qrawlr
 {
     Action::Action(const std::string& name, const std::vector<Arg>& args)
-        : m_name(name), m_func(nullptr), m_args(args)
+        : m_name(name), m_args(args), m_func(nullptr)
     {
         if (name == "push")
             m_func = action_push;

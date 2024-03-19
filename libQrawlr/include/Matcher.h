@@ -54,7 +54,7 @@ namespace qrawlr
         std::string action_list_to_string(const std::vector<Action>& actions) const;
         std::string action_args_to_string(const std::vector<Action::Arg>& args) const;
     private:
-        MatchResult apply_invert(const ParseData& data, int index_old, int index_new, ParseTreeRef tree) const;
+        MatchResult apply_invert(const ParseData& data, int index_old, ParseTreeRef tree) const;
         ParseTreeRef apply_optional_match_repl(ParseTreeRef tree, ParseData& data, int index) const;
         void run_actions_for_trigger(const std::string& trigger_name, const ParseTreeRef tree, ParseData& data, int index) const;
     protected:

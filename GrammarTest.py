@@ -143,7 +143,7 @@ def test_qism():
     with open(filename, "r") as f:
         text = f.read()
 
-    run_test("grammars/qism_grammar.qgr", "Code", text, filename)
+    run_test("grammars/qism_grammar.qgr", "Code", text, filename, do_write_tree=True)
 
 QINP_DIR = "../QINP/stdlib"
 
@@ -176,9 +176,9 @@ def test_qinp(test_all = False):
 
 if __name__ == "__main__":
     try:
-        #test_qism()
+        test_qism()
         #cProfile.run("test_qinp(True)", sort="tottime")
-        test_qinp(True)
+        #test_qinp(True)
         #test_algebra()
         #test_grammar(True)
     except GrammarException as e:

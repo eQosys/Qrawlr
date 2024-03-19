@@ -10,7 +10,9 @@ void print_help(const char* exe_name)
     printf("  verify\n");
     printf("  parse\n");
     printf("  render\n");
+    printf("  graph\n");
     printf("  help\n");
+    printf("Mode 'help' does not require any other arguments\n");
 }
 
 int main(int argc, char** argv)
@@ -49,6 +51,8 @@ int main(int argc, char** argv)
     std::string input_file = argv[3];
     std::string output_file = argv[4];
 
+    std::string temp_file = "/tmp/qrawlr-" + std::to_string(std::rand()) + ".tmp";
+
     try
     {
         qrawlr::Grammar grammar = qrawlr::Grammar::load_from_file(grammar_file);
@@ -65,8 +69,42 @@ int main(int argc, char** argv)
         }
         else if (mode == "render")
         {
-            printf("TODO: render\n");
-            return 1;
+            printf("Reading input file...\n");
+            auto text = qrawlr::read_file(input_file);
+
+            printf("Loading grammar...\n");
+            auto result = grammar.apply_to(text, entry_point, input_file);
+
+            printf("Generating graph...\n");
+            qrawlr::write_file(temp_file, result.tree->to_digraph_str(true));
+
+            printf("Rendering to output file...\n");
+            std::string command;
+            command += "dot -Tpdf";
+            command += " -o \"" + qrawlr::escape_string(output_file) + "\"";
+            command += " \"" + qrawlr::escape_string(temp_file) + "\"";
+            if (std::system(command.c_str()))
+            {
+                printf("Failed to execute command: %s\n", command.c_str());
+                return 1;
+            }
+        }
+        else if (mode == "graph")
+        {
+            printf("Reading input file...\n");
+            auto text = qrawlr::read_file(input_file);
+
+            printf("Loading grammar...\n");
+            auto grammar = qrawlr::Grammar::load_from_file(grammar_file);
+
+            printf("Parsing text...\n");
+            auto result = grammar.apply_to(text, entry_point, input_file);
+
+            printf("Writing output file...\n");
+            qrawlr::write_file(output_file, result.tree->to_digraph_str(true));
+
+            printf("Done\n");
+            return 0;
         }
         else
         {
