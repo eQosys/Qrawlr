@@ -122,7 +122,7 @@ namespace qrawlr
     {
         std::string text;
         text += "\"";
-        text += m_value;
+        text += escape_string(m_value);
         text += "\"";
         text += get_optional_verbose_info(verbose);
 
