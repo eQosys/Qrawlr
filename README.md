@@ -1,5 +1,5 @@
 # Qrawlr
 
-Qrawlr is a simple text crawler that can be used to build syntax trees from (binary) text. It is currently written in Python but will be ported to C++ and [QINP](https://github.com/eQosys/QINP) when it is more mature.
+Qrawlr is a simple text crawler that can be used to build syntax trees from (binary) text. It is currently written in Python and C++ but will be ported to [QINP](https://github.com/eQosys/QINP).
 
 View the [documentation](./docs/README.md) for more information.
