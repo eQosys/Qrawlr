@@ -1,5 +1,7 @@
 #include "ParseTree.h"
 
+#include <stdexcept>
+
 #include "EscapeString.h"
 
 namespace qrawlr
@@ -131,6 +133,70 @@ namespace qrawlr
         graph += " [label=\"";
         graph += escape_string(text);
         graph += "\" shape=plaintext]\n";
+    }
+
+    bool is_node(const ParseTreeRef tree)
+    {
+        return get_node(tree) != nullptr;
+    }
+    
+    bool is_node(const ParseTreeRef tree, const std::string& name)
+    {
+        return get_node(tree, name) != nullptr;
+    }
+
+    ParseTreeNodeRef get_node(const ParseTreeRef tree)
+    {
+        return std::dynamic_pointer_cast<ParseTreeNode>(tree);
+    }
+
+    ParseTreeNodeRef get_node(const ParseTreeRef tree, const std::string& name)
+    {
+        auto node = get_node(tree);
+        if (!node)
+            return nullptr;
+        
+        if (node->get_name() != name)
+            return nullptr;
+
+        return node;
+    }
+
+    ParseTreeNodeRef expect_node(const ParseTreeRef tree)
+    {
+        auto node = get_node(tree);
+        if (!node)
+            throw std::runtime_error("[*expect_node*]: Expected node in grammar tree");
+            
+        return node;
+    }
+    
+    ParseTreeNodeRef expect_node(const ParseTreeRef tree, const std::string& name)
+    {
+        auto node = get_node(tree, name);
+        if (!node)
+            throw std::runtime_error("[*expect_node*]: Expected node with name '" + name + "' in grammar tree");
+            
+        return node;
+    }
+
+    bool is_leaf(const ParseTreeRef tree)
+    {
+        return get_leaf(tree) != nullptr;
+    }
+
+    ParseTreeExactMatchRef get_leaf(const ParseTreeRef tree)
+    {
+        return std::dynamic_pointer_cast<ParseTreeExactMatch>(tree);
+    }
+
+    ParseTreeExactMatchRef expect_leaf(const ParseTreeRef tree)
+    {
+        auto leaf = get_leaf(tree);
+        if (!leaf)
+            throw std::runtime_error("[*expect_leaf*]: Expected leaf in grammar tree");
+            
+        return leaf;
     }
 
 } // namespace qrawlr

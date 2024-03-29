@@ -85,4 +85,14 @@ namespace qrawlr
 
     using ParseTreeExactMatchRef = std::shared_ptr<ParseTreeExactMatch>;
 
+    bool is_node(const ParseTreeRef tree);
+    bool is_node(const ParseTreeRef tree, const std::string& name);
+    ParseTreeNodeRef get_node(const ParseTreeRef tree);
+    ParseTreeNodeRef get_node(const ParseTreeRef tree, const std::string& name);
+    ParseTreeNodeRef expect_node(const ParseTreeRef tree);
+    ParseTreeNodeRef expect_node(const ParseTreeRef tree, const std::string& name);
+    bool is_leaf(const ParseTreeRef tree);
+    ParseTreeExactMatchRef get_leaf(const ParseTreeRef tree);
+    ParseTreeExactMatchRef expect_leaf(const ParseTreeRef tree);
+
 } // namespace qrawlr

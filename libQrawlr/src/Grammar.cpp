@@ -443,55 +443,6 @@ namespace qrawlr
         return std::stoi(get_leaf(node->get_children()[0])->get_value(), nullptr, base);
     }
 
-    ParseTreeNodeRef Grammar::get_node(const ParseTreeRef tree)
-    {
-        return std::dynamic_pointer_cast<ParseTreeNode>(tree);
-    }
-
-    ParseTreeNodeRef Grammar::get_node(const ParseTreeRef tree, const std::string& name)
-    {
-        auto node = get_node(tree);
-        if (!node)
-            return nullptr;
-        
-        if (node->get_name() != name)
-            return nullptr;
-
-        return node;
-    }
-
-    ParseTreeNodeRef Grammar::expect_node(const ParseTreeRef tree)
-    {
-        auto node = get_node(tree);
-        if (!node)
-            throw GrammarException("[*expect_node*]: Expected node in grammar tree");
-            
-        return node;
-    }
-    
-    ParseTreeNodeRef Grammar::expect_node(const ParseTreeRef tree, const std::string& name)
-    {
-        auto node = get_node(tree, name);
-        if (!node)
-            throw GrammarException("[*expect_node*]: Expected node with name '" + name + "' in grammar tree");
-            
-        return node;
-    }
-
-    ParseTreeExactMatchRef Grammar::get_leaf(const ParseTreeRef tree)
-    {
-        return std::dynamic_pointer_cast<ParseTreeExactMatch>(tree);
-    }
-
-    ParseTreeExactMatchRef Grammar::expect_leaf(const ParseTreeRef tree)
-    {
-        auto leaf = get_leaf(tree);
-        if (!leaf)
-            throw GrammarException("[*expect_leaf*]: Expected leaf in grammar tree");
-            
-        return leaf;
-    }
-
     GrammarException Grammar::make_exception(const std::string& message, const Position& pos)
     {
         return GrammarException(message, m_filename + ":" + std::to_string(pos.line) + ":" + std::to_string(pos.column));

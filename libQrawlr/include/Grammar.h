@@ -43,16 +43,6 @@ namespace qrawlr
         std::string load_escape_sequence_from_tree(const ParseTreeRef tree);
         int load_integer_from_tree(const ParseTreeRef tree);
     private:
-        static bool is_node(const ParseTreeRef tree) { return get_node(tree) != nullptr;}
-        static bool is_node(const ParseTreeRef tree, const std::string& name) { return get_node(tree, name) != nullptr; }
-        static ParseTreeNodeRef get_node(const ParseTreeRef tree);
-        static ParseTreeNodeRef get_node(const ParseTreeRef tree, const std::string& name);
-        static ParseTreeNodeRef expect_node(const ParseTreeRef tree);
-        static ParseTreeNodeRef expect_node(const ParseTreeRef tree, const std::string& name);
-        static bool is_leaf(const ParseTreeRef tree) { return get_leaf(tree) != nullptr; }
-        static ParseTreeExactMatchRef get_leaf(const ParseTreeRef tree);
-        static ParseTreeExactMatchRef expect_leaf(const ParseTreeRef tree);
-    private:
         static Grammar load_internal_grammar();
     private:
         GrammarException make_exception(const std::string& message, const Position& pos);
