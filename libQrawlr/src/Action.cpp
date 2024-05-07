@@ -30,6 +30,7 @@ namespace qrawlr
             if (arg.type != ArgType::Match)
                 continue;
 
+            arg.type = ArgType::String;
             arg.value = tree->to_string();
         }
 
@@ -56,6 +57,11 @@ namespace qrawlr
         auto& history = data.get_stack_history(arg_stack_name.value);
 
         stack.push_back(arg_item.value);
+        printf("Stack after push:\n");
+        for (auto& item : stack)
+        {
+            printf("  ->%s<-\n", item.c_str());
+        }
         history.push_back(std::make_pair("push", arg_item.value));
     }
 

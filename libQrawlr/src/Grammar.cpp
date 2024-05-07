@@ -355,7 +355,7 @@ namespace qrawlr
         auto trigger_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
 
         auto children = get_node(node->get_children()[1])->get_children();
-        children.erase(children.begin());
+
         for (auto child : children)
             matcher->add_action(trigger_name, load_matcher_action_from_tree(child));
     }
