@@ -30,7 +30,7 @@ namespace qrawlr
                 for (const auto& item : data.get_stack(stack_name))
                     data_str += "    -> " + item + " <-\n";
             }
-            throw GrammarException("Stacks not empty after parsing. Data: " + data_str);
+            throw GrammarException("Stacks not empty after parsing. Data: " + data_str, data.get_position_string(result.pos_end.index));
         }
 
         return result;

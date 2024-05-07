@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace qrawlr
 {
     struct Position
@@ -7,5 +9,7 @@ namespace qrawlr
         int index;
         int line;
         int column;
+
+        std::string to_string(const std::string& path);
     };
 } // namespace qrawlr

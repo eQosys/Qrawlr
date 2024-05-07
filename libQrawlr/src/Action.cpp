@@ -92,7 +92,7 @@ namespace qrawlr
         if (arg_message.type != ArgType::String)
             throw GrammarException("Invalid type for message argument in action_message");
 
-        std::cout << "MSG: " << data.get_position_string(index) << ": " << arg_message.value << std::endl;
+        std::cout << data.get_position_string(index) << "MSG: " << ": " << arg_message.value << std::endl;
     }
 
     void Action::action_fail(const std::vector<Arg>& args, ParseData& data, int index)
@@ -105,6 +105,6 @@ namespace qrawlr
         if (arg_message.type != ArgType::String)
             throw GrammarException("Invalid type for message argument in action_fail");
 
-        throw GrammarException("FAIL: " + data.get_position_string(index) + ": " + arg_message.value);
+        throw GrammarException("FAIL: " + arg_message.value, data.get_position_string(index));
     }
 } // namespace qrawlr
