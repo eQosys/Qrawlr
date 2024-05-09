@@ -8,6 +8,10 @@
 
 namespace qrawlr
 {
+    typedef std::shared_ptr<class ParseTree> ParseTreeRef;
+    typedef std::shared_ptr<class ParseTreeNode> ParseTreeNodeRef;
+    typedef std::shared_ptr<class ParseTreeExactMatch> ParseTreeExactMatchRef;
+
     class ParseTree
     {
     public:
@@ -37,8 +41,6 @@ namespace qrawlr
         friend class ParseTreeNode;
     };
 
-    using ParseTreeRef = std::shared_ptr<ParseTree>;
-
     class ParseTreeNode : public ParseTree
     {
     public:
@@ -62,8 +64,6 @@ namespace qrawlr
         std::vector<ParseTreeRef> m_children;
     };
 
-    using ParseTreeNodeRef = std::shared_ptr<ParseTreeNode>;
-
     class ParseTreeExactMatch : public ParseTree
     {
     public:
@@ -83,8 +83,6 @@ namespace qrawlr
         std::string m_value;
     };
 
-    using ParseTreeExactMatchRef = std::shared_ptr<ParseTreeExactMatch>;
-
     bool is_node(const ParseTreeRef tree);
     bool is_node(const ParseTreeRef tree, const std::string& name);
     ParseTreeNodeRef get_node(const ParseTreeRef tree);
@@ -94,5 +92,9 @@ namespace qrawlr
     bool is_leaf(const ParseTreeRef tree);
     ParseTreeExactMatchRef get_leaf(const ParseTreeRef tree);
     ParseTreeExactMatchRef expect_leaf(const ParseTreeRef tree);
+
+    ParseTreeRef get_child(const ParseTreeRef tree, const std::string& path);
+    ParseTreeNodeRef get_child_node(const ParseTreeRef tree, const std::string& path);
+    ParseTreeExactMatchRef get_child_leaf(const ParseTreeRef tree, const std::string& path);
 
 } // namespace qrawlr

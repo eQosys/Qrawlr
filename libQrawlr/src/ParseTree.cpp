@@ -199,4 +199,20 @@ namespace qrawlr
         return leaf;
     }
 
+    ParseTreeRef get_child(const ParseTreeRef tree, const std::string& path)
+    {
+        // TODO: Proper implementation
+        return nullptr;
+    }
+    
+    ParseTreeNodeRef get_child_node(const ParseTreeRef tree, const std::string& path)
+    {
+        return get_node(get_child(tree, path));
+    }
+    
+    ParseTreeExactMatchRef get_child_leaf(const ParseTreeRef tree, const std::string& path)
+    {
+        return get_leaf(get_child(tree, path));
+    }
+
 } // namespace qrawlr
