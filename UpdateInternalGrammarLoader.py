@@ -29,7 +29,7 @@ def update_internal_grammar_loader():
     new_grammar = GrammarLoader(init_tree = tree).get_grammar()
 
     # TODO: Add tests for new grammar implementation
-    print("TODO: Here should we run some tests...")
+    print("TODO: Here we should run some tests...")
 
     # Generate new grammar loader
     print("INFO: Generating new grammar loader (python)...")

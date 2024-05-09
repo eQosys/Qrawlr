@@ -112,7 +112,7 @@ class ParseData:
         return self.__text[key]
 
 class MatcherInitializers:
-    def __init__(self, inverted: bool = False, count_min: int = 1, count_max: int = 1, look_ahead: bool = False, omit_match: bool = False, match_repl: (int, str) = None, actions: dict[str, list[tuple[str, list[tuple[int, None]]]]] = {}) -> None:
+    def __init__(self, inverted: bool = False, count_min: int = 1, count_max: int = 1, look_ahead: bool = False, omit_match: bool = False, match_repl: tuple[int, str] = None, actions: dict[str, list[tuple[str, list[tuple[int, None]]]]] = {}) -> None:
         self.inverted      = inverted
         self.count_min     = count_min
         self.count_max     = count_max
@@ -662,8 +662,13 @@ class MatcherMatchRule(Matcher):
             raise GrammarException(f"Rule '{self.rulename}' not found")
         rule = parseData.get_rule(self.rulename)
         tree, index = rule.match(parseData, index)
-        if isinstance(tree, ParseTreeNode) and not rule.anonymous:
-            tree.name = self.rulename
+
+        if isinstance(tree, ParseTreeNode):
+            if not rule.anonymous:
+                tree.name = self.rulename
+            if rule.collapse and len(tree.children) == 1:
+                tree.name = None
+
         return tree, index
     
     def _to_string(self) -> str:
@@ -705,11 +710,12 @@ class MatcherMatchStack(Matcher):
         return f"std::make_shared<MatcherMatchStack>(\"{escape_string(self.stack_name)}\", {self.index}, {self._initializers_to_cpp_arg_str()})"
 
 class Rule(MatcherMatchAny):
-    def __init__(self, name=None, anonymous=False, fuse_children=False, *args, **kwargs) -> None:
+    def __init__(self, name=None, anonymous=False, fuse_children=False, collapse=False, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.name = name
         self.anonymous = anonymous
         self.fuse_children = fuse_children
+        self.collapse = collapse
 
     def match(self, parseData: ParseData, index: int) -> tuple[ParseTree, int]:
         tree, index = super().match(parseData, index)
@@ -722,6 +728,7 @@ class Rule(MatcherMatchAny):
         args.append(f"name=\"{escape_string(self.name)}\"")
         args.append(f"anonymous={self.anonymous}")
         args.append(f"fuse_children={self.fuse_children}")
+        args.append(f"collapse={self.collapse}")
         args.append(f"options={self._generate_python_code_option_list()}")
         return f"Rule({', '.join(args)}, {self._initializers_to_python_arg_str()})"
 
@@ -734,6 +741,8 @@ class Rule(MatcherMatchAny):
             flags |= (1 << 0)
         if self.fuse_children:
             flags |= (1 << 1)
+        if self.collapse:
+            flags |= (1 << 2)
         return f"Flags<Rule::Flags>::from_raw({flags})"
 
     def __fuse_children(self, tree: ParseTree) -> None:
@@ -764,6 +773,8 @@ class Rule(MatcherMatchAny):
             modifiers.append("hidden")
         if self.fuse_children:
             modifiers.append("fuse")
+        if self.collapse:
+            modifiers.append("collapse")
         
         name = self.name
         if len(modifiers) > 0:

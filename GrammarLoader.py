@@ -10,7 +10,7 @@ class GrammarLoader:
     def __init__(self, init_tree: ParseTree = None, path: str = None) -> None:
         self.__path = path
 
-        self.__referenced_rules: dict[str, tuple(bool, list[tuple[int, int]])] = {}
+        self.__referenced_rules: dict[str, tuple[bool, list[tuple[int, int]]]] = {}
         self.rules = dict()
 
         if init_tree is not None:
@@ -126,6 +126,8 @@ class GrammarLoader:
             rule.anonymous = True
         elif name == "fuse":
             rule.fuse_children = True
+        elif name == "collapse":
+            rule.collapse = True
         else:
             raise self.__make_exception(f"Unknown rule modifier '{name}'", tree.children[0].position_begin)
         

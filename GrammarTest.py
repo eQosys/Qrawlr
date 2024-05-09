@@ -176,9 +176,9 @@ def test_qinp(test_all = False):
 
 if __name__ == "__main__":
     try:
-        test_qism()
+        #test_qism()
         #cProfile.run("test_qinp(True)", sort="tottime")
-        #test_qinp(True)
+        test_qinp(False)
         #test_algebra()
         #test_grammar(True)
     except GrammarException as e:

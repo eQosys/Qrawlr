@@ -27,6 +27,8 @@ namespace qrawlr
                 flags.push_back("hidden");
             if (m_rule_flags.is_set(Flags::FuseChildren))
                 flags.push_back("fuse");
+            if (m_rule_flags.is_set(Flags::Collapse))
+                flags.push_back("collapse");
 
             if (!flags.empty())
             {

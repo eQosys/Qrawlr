@@ -141,6 +141,8 @@ namespace qrawlr
             rule->get_rule_flags().set(Rule::Flags::Anonymous);
         else if (modifier_name == "fuse")
             rule->get_rule_flags().set(Rule::Flags::FuseChildren);
+        else if (modifier_name == "collapse")
+            rule->get_rule_flags().set(Rule::Flags::Collapse);
         else
             throw make_exception("Unknown rule modifier '" + modifier_name + "'", node->get_pos_begin());
     }

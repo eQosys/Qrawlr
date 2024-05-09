@@ -12,7 +12,8 @@ namespace qrawlr
         {
             Anonymous = 0,
             FuseChildren = 1,
-        }; 
+            Collapse = 2
+        };
     public:
         Rule();
         template <typename... Args>

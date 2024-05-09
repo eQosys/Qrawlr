@@ -137,8 +137,9 @@ Rule names follow the same rules as [identifiers](#identifier)
 
 #### Rule modifiers
 
-  - `hidden`: The matched content will be added directly to the parent.
+  - `hidden`: The matched children will be added directly to the parent.
   - `fuse`: All consecutive strings will be fused into a single string. (e.g. "Hel" "lo" -> "Hello")
+  - `collapse`: When the rule has only one child after parsing, the child will be added directly to the parent.
 
 ---
 

@@ -54,6 +54,7 @@ RuleModifierList(hidden):
 RuleModifier:
     "hidden"
     "fuse"
+    "collapse"
 
 \\ ---------------- RULE OPTION ----------------
 

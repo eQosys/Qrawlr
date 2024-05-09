@@ -442,9 +442,13 @@ namespace qrawlr
             throw GrammarException("Rule '" + m_rule_name + "' not found");
         
         auto result = rule->match(data, index);
-        if (auto node = std::dynamic_pointer_cast<ParseTreeNode>(result.tree); node != nullptr && !rule->m_rule_flags.is_set(Rule::Flags::Anonymous))
-            node->set_name(m_rule_name);
-        
+        if (auto node = std::dynamic_pointer_cast<ParseTreeNode>(result.tree); node != nullptr)
+        {
+            if (!rule->m_rule_flags.is_set(Rule::Flags::Anonymous))
+                node->set_name(m_rule_name);
+            if (rule->m_rule_flags.is_set(Rule::Flags::Collapse) && node->get_children().size() == 1)
+                node->set_name("");
+        }
         return result;
     }
 
