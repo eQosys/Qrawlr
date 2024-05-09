@@ -1,8 +1,11 @@
 #include "ParseTree.h"
 
 #include <stdexcept>
+#include <sstream>
+#include <limits>
 
 #include "EscapeString.h"
+#include "GrammarException.h"\
 
 namespace qrawlr
 {
@@ -135,22 +138,24 @@ namespace qrawlr
         graph += "\" shape=plaintext]\n";
     }
 
-    bool is_node(const ParseTreeRef tree)
+    // -------------------- Helpers -------------------- //
+
+    bool is_node(ParseTreeRef tree)
     {
         return get_node(tree) != nullptr;
     }
     
-    bool is_node(const ParseTreeRef tree, const std::string& name)
+    bool is_node(ParseTreeRef tree, const std::string& name)
     {
         return get_node(tree, name) != nullptr;
     }
 
-    ParseTreeNodeRef get_node(const ParseTreeRef tree)
+    ParseTreeNodeRef get_node(ParseTreeRef tree)
     {
         return std::dynamic_pointer_cast<ParseTreeNode>(tree);
     }
 
-    ParseTreeNodeRef get_node(const ParseTreeRef tree, const std::string& name)
+    ParseTreeNodeRef get_node(ParseTreeRef tree, const std::string& name)
     {
         auto node = get_node(tree);
         if (!node)
@@ -162,7 +167,7 @@ namespace qrawlr
         return node;
     }
 
-    ParseTreeNodeRef expect_node(const ParseTreeRef tree)
+    ParseTreeNodeRef expect_node(ParseTreeRef tree)
     {
         auto node = get_node(tree);
         if (!node)
@@ -171,7 +176,7 @@ namespace qrawlr
         return node;
     }
     
-    ParseTreeNodeRef expect_node(const ParseTreeRef tree, const std::string& name)
+    ParseTreeNodeRef expect_node(ParseTreeRef tree, const std::string& name)
     {
         auto node = get_node(tree, name);
         if (!node)
@@ -180,17 +185,17 @@ namespace qrawlr
         return node;
     }
 
-    bool is_leaf(const ParseTreeRef tree)
+    bool is_leaf(ParseTreeRef tree)
     {
         return get_leaf(tree) != nullptr;
     }
 
-    ParseTreeExactMatchRef get_leaf(const ParseTreeRef tree)
+    ParseTreeExactMatchRef get_leaf(ParseTreeRef tree)
     {
         return std::dynamic_pointer_cast<ParseTreeExactMatch>(tree);
     }
 
-    ParseTreeExactMatchRef expect_leaf(const ParseTreeRef tree)
+    ParseTreeExactMatchRef expect_leaf(ParseTreeRef tree)
     {
         auto leaf = get_leaf(tree);
         if (!leaf)
@@ -199,20 +204,123 @@ namespace qrawlr
         return leaf;
     }
 
-    ParseTreeRef get_child(const ParseTreeRef tree, const std::string& path)
+    bool parse_get_child_path_elem(const std::string& elem, std::string& name_out, int& index_out)
     {
-        // TODO: Proper implementation
-        return nullptr;
+        size_t selective_index = elem.find('#');
+        if (selective_index == elem.npos) // Format is either <identifier> or <index>
+        {
+            std::stringstream ss(elem);
+            ss >> index_out;
+            if (ss.fail())
+            {
+                index_out = 0;
+                name_out = elem;
+            }
+            else
+            {
+                name_out = "";
+            }
+        }
+        else // Format is <identifier>#<name>
+        {
+            name_out = elem.substr(0, selective_index);
+
+            std::stringstream ss(elem.substr(selective_index + 1));
+            ss >> index_out;
+            if (ss.fail())
+                return false;
+        }
+
+        return true;
+    }
+
+    ParseTreeRef find_get_child_child(ParseTreeNodeRef node, const std::string& name, int index)
+    {
+        if (name.empty()) // Search by index only, child could be either node or leaf
+        {
+            auto& children = node->get_children();
+            if (index < 0) // Select in reverse order
+            {
+                index = (int)children.size() - index;
+                if (index < 0) // Out of bounds
+                    return nullptr;
+            }
+            if (index >= (int)children.size()) // Out of bounds
+                return nullptr;
+
+            return children[index];
+        }
+        else // Search by name and index, child must be node
+        {
+            for (auto& child : node->get_children())
+            {
+                auto child_node = get_node(child);
+                if (!child_node) // Skip non-nodes
+                    continue;
+
+                if (child_node->get_name() != name) // Skip nodes with wrong name
+                    continue;
+
+                if (index == 0)
+                    return child;
+
+                --index;
+            }
+
+            return nullptr; // No matching child found
+        }
+    }
+
+    // usage example: get_child(tree, "StatementFunctionDeclDef.FunctionHeader.FunctionParameters.FunctionParameter#1.0")
+    // Path syntax:
+    //   path: <sub1>.<sub2>.<...>
+    //   sub: <identifier>
+    //        <index>
+    //        <identifier>#<index>
+    ParseTreeRef get_child(ParseTreeRef tree, const std::string& path)
+    {
+        size_t sub_begin = 0;
+        size_t sub_end = path.find('.');
+        do
+        {
+            // retrieve a single element from the path (e.g. directory)
+            std::string elem = path.substr(sub_begin, sub_end - sub_begin);
+
+            // Convert to node if possible, otherwise throw error
+            auto node = get_node(tree);
+            if (!node)
+                throw GrammarException("Expected node but got leaf in 'get_child'. (path: " + path + ", elem: " + elem + ")");
+
+            // Parse element
+            std::string name;
+            int index;
+            if (!parse_get_child_path_elem(elem, name, index))
+                throw GrammarException("Invalid index provided in 'get_child'. (path: " + path + ", elem: " + elem + ")");
+            
+            if (!(tree = find_get_child_child(node, name, index)))
+                throw GrammarException("Could not find matching child in 'get_child'. (path: " + path + ", elem: " + elem + ")");
+
+            sub_begin = sub_end + 1;
+            sub_end = path.find('.', sub_begin);
+        } while (sub_begin != 0);
+
+        return tree;
     }
     
-    ParseTreeNodeRef get_child_node(const ParseTreeRef tree, const std::string& path)
+    ParseTreeNodeRef get_child_node(ParseTreeRef tree, const std::string& path)
     {
-        return get_node(get_child(tree, path));
+        auto node = get_node(get_child(tree, path));
+        if (!node)
+            throw GrammarException("Expected node but found leaf matching path '" + path + "'");
+        return node;
     }
     
-    ParseTreeExactMatchRef get_child_leaf(const ParseTreeRef tree, const std::string& path)
+    ParseTreeExactMatchRef get_child_leaf(ParseTreeRef tree, const std::string& path)
     {
-        return get_leaf(get_child(tree, path));
+        auto leaf = get_leaf(get_child(tree, path));
+        if (!leaf)
+            throw GrammarException("Expected leaf but found node matching path '" + path + "'");
+        return leaf;
     }
 
 } // namespace qrawlr

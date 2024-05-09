@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceFolder}/bin/Debug/qrawlr",
-            "args": [ "verify", "grammars/qinp_grammar.qgr:GlobalCode", "test_files/push_pop_test.qnp", "output/push_pop_test.qnp.pdf" ],
+            "args": [ "render", "grammars/qinp_grammar.qgr:GlobalCode", "test_files/push_pop_test.qnp", "output/push_pop_test.qnp.pdf" ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build"
         }

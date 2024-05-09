@@ -83,18 +83,18 @@ namespace qrawlr
         std::string m_value;
     };
 
-    bool is_node(const ParseTreeRef tree);
-    bool is_node(const ParseTreeRef tree, const std::string& name);
-    ParseTreeNodeRef get_node(const ParseTreeRef tree);
-    ParseTreeNodeRef get_node(const ParseTreeRef tree, const std::string& name);
-    ParseTreeNodeRef expect_node(const ParseTreeRef tree);
-    ParseTreeNodeRef expect_node(const ParseTreeRef tree, const std::string& name);
-    bool is_leaf(const ParseTreeRef tree);
-    ParseTreeExactMatchRef get_leaf(const ParseTreeRef tree);
-    ParseTreeExactMatchRef expect_leaf(const ParseTreeRef tree);
+    bool is_node(ParseTreeRef tree);
+    bool is_node(ParseTreeRef tree, const std::string& name);
+    ParseTreeNodeRef get_node(ParseTreeRef tree);
+    ParseTreeNodeRef get_node(ParseTreeRef tree, const std::string& name);
+    ParseTreeNodeRef expect_node(ParseTreeRef tree);
+    ParseTreeNodeRef expect_node(ParseTreeRef tree, const std::string& name);
+    bool is_leaf(ParseTreeRef tree);
+    ParseTreeExactMatchRef get_leaf(ParseTreeRef tree);
+    ParseTreeExactMatchRef expect_leaf(ParseTreeRef tree);
 
-    ParseTreeRef get_child(const ParseTreeRef tree, const std::string& path);
-    ParseTreeNodeRef get_child_node(const ParseTreeRef tree, const std::string& path);
-    ParseTreeExactMatchRef get_child_leaf(const ParseTreeRef tree, const std::string& path);
+    ParseTreeRef get_child(ParseTreeRef tree, const std::string& path);
+    ParseTreeNodeRef get_child_node(ParseTreeRef tree, const std::string& path);
+    ParseTreeExactMatchRef get_child_leaf(ParseTreeRef tree, const std::string& path);
 
 } // namespace qrawlr

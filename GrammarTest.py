@@ -178,8 +178,8 @@ if __name__ == "__main__":
     try:
         #test_qism()
         #cProfile.run("test_qinp(True)", sort="tottime")
-        test_qinp(False)
+        #test_qinp(False)
         #test_algebra()
-        #test_grammar(True)
+        test_grammar(False)
     except GrammarException as e:
         print(f"  ERROR: {e}")

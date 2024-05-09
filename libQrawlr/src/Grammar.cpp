@@ -61,7 +61,7 @@ namespace qrawlr
         if (result.tree == nullptr || (size_t)result.pos_end.index < text.size())
             throw GrammarException("Failed to parse provided grammar file", filename + ":" + std::to_string(result.pos_end.line) + ":" + std::to_string(result.pos_end.column));
 
-        g.load_from_tree(result.tree, filename);
+        g.load_from_tree(expect_node(result.tree, "Grammar"), filename);
 
         return g;
     }
@@ -74,45 +74,50 @@ namespace qrawlr
         m_rules[rule->get_name()] = rule;
     }
 
-    void Grammar::load_from_tree(const ParseTreeRef tree, const std::string& filename)
+    void Grammar::load_from_tree(const ParseTreeNodeRef root, const std::string& filename) // "Grammar"
     {
+        if (root->get_name() != "Grammar")
+            make_exception("Expected node with name 'Grammar', but got '" + root->get_name() + "'", root->get_pos_begin());
+
         m_filename = filename;
         m_rules.clear();
-
-        ParseTreeNodeRef root = expect_node(tree);
 
         for (auto& child : root->get_children())
         {
             if (is_node(child, "RuleDefinition"))
             {
-                RuleRef rule = load_rule_definition_from_tree(child);
+                RuleRef rule = load_rule_definition_from_tree(get_node(child));
                 m_rules[rule->get_name()] = rule;
             }
             else if (is_node(child, "Comment"))
                 ; // Ignore comments
             else if (is_node(child))
-                throw GrammarException("[*load_from_tree*]: Unexpected node in grammar tree");
+                make_exception("[*load_from_tree*]: Unexpected node in grammar tree", child->get_pos_begin());
             else
-                throw GrammarException("[*load_from_tree*]: Expected node in grammar tree");
+                make_exception("[*load_from_tree*]: Expected node in grammar tree", child->get_pos_begin());
         }
     }
 
-    RuleRef Grammar::load_rule_definition_from_tree(const ParseTreeRef tree)
+    RuleRef Grammar::load_rule_definition_from_tree(ParseTreeNodeRef node) // "RuleDefinition"
     {
-        auto node = expect_node(tree, "RuleDefinition");
+        if (node->get_name() != "RuleDefinition")
+            make_exception("Expected node with name 'RuleDefinition', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        RuleRef rule = load_rule_header_from_tree(node->get_children()[0]);
-        rule->set_matchers(load_rule_body_from_tree(node->get_children()[1]));
+        RuleRef rule = load_rule_header_from_tree(get_child_node(node, "RuleHeader"));
+        rule->set_matchers(load_rule_body_from_tree(get_child_node(node, "RuleBody")));
         return rule;
     }
 
-    RuleRef Grammar::load_rule_header_from_tree(const ParseTreeRef tree)
+    RuleRef Grammar::load_rule_header_from_tree(ParseTreeNodeRef node) // "RuleHeader"
     {
-        auto node = expect_node(tree, "RuleHeader");
+        if (node->get_name() != "RuleHeader")
+            make_exception("Expected node with name 'RuleHeader', but got '" + node->get_name() + "'", node->get_pos_begin());
 
         auto rule = std::make_shared<Rule>();
 
         rule->set_name(get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value());
+
+        rule->set_name(get_child_leaf(node, "Identifier.0")->get_value());
 
         if (m_rules.find(rule->get_name()) != m_rules.end())
             throw make_exception("Rule '" + rule->get_name() + "' already defined", node->get_pos_begin());
@@ -121,21 +126,17 @@ namespace qrawlr
         children.erase(children.begin());
 
         for (auto child : children)
-        {
-            if (is_node(child, "RuleModifier"))
-                load_rule_modifier_from_tree(rule, child);
-            else
-                throw make_exception("Expected node with name 'RuleModifier' in rule header", child->get_pos_begin());
-        }
+            load_rule_modifier_from_tree(rule, expect_node(child, "RuleModifier"));
 
         return rule;
     }
 
-    void Grammar::load_rule_modifier_from_tree(RuleRef rule, const ParseTreeRef tree)
+    void Grammar::load_rule_modifier_from_tree(RuleRef rule, ParseTreeNodeRef node) // "RuleModifier"
     {
-        auto node = expect_node(tree, "RuleModifier");
+        if (node->get_name() != "RuleModifier")
+            make_exception("Expected node with name 'RuleModifier', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto modifier_name = get_leaf(node->get_children()[0])->get_value();
+        auto modifier_name = get_child_leaf(node, "0")->get_value();
 
         if (modifier_name == "hidden")
             rule->get_rule_flags().set(Rule::Flags::Anonymous);
@@ -147,20 +148,21 @@ namespace qrawlr
             throw make_exception("Unknown rule modifier '" + modifier_name + "'", node->get_pos_begin());
     }
 
-    std::vector<MatcherRef> Grammar::load_rule_body_from_tree(const ParseTreeRef tree)
+    std::vector<MatcherRef> Grammar::load_rule_body_from_tree(ParseTreeNodeRef node) // "RuleBody"
     {
-        auto node = expect_node(tree, "RuleBody");
-
+        if (node->get_name() != "RuleBody")
+            make_exception("Expected node with name 'RuleBody', but got '" + node->get_name() + "'", node->get_pos_begin());
+        
         std::vector<MatcherRef> matchers;
 
         for (auto& child : node->get_children())
         {
             if (is_node(child, "RuleOptionDefinition"))
-                matchers.push_back(load_rule_option_definition_from_tree(child));
+                matchers.push_back(load_rule_option_definition_from_tree(get_node(child)));
             else if (is_node(child, "Comment"))
                 ; // Ignore comments
             else if (is_node(child))
-                throw GrammarException("[*load_rule_body_from_tree*]: Unexpected node in grammar tree");
+                make_exception("[*load_rule_body_from_tree*]: Unexpected node in grammar tree", child->get_pos_begin());
             else
                 throw make_exception("Expected node in grammar tree", child->get_pos_begin());
         }
@@ -168,40 +170,40 @@ namespace qrawlr
         return matchers;
     }
 
-    MatcherRef Grammar::load_rule_option_definition_from_tree(const ParseTreeRef tree)
+    MatcherRef Grammar::load_rule_option_definition_from_tree(ParseTreeNodeRef node) // "RuleOptionDefinition"
     {
-        auto node = expect_node(tree, "RuleOptionDefinition");
+        if (node->get_name() != "RuleOptionDefinition")
+            make_exception("Expected node with name 'RuleOptionDefinition', but got '" + node->get_name() + "'", node->get_pos_begin());
 
         std::vector<MatcherRef> matchers;
         for (auto& child : node->get_children())
-            matchers.push_back(load_full_matcher_from_tree(child));
+            matchers.push_back(load_full_matcher_from_tree(expect_node(child, "FullMatcher")));
 
         auto option = std::make_shared<MatcherMatchAll>(matchers);
 
         return option;
     }
 
-    MatcherRef Grammar::load_full_matcher_from_tree(const ParseTreeRef tree)
+    MatcherRef Grammar::load_full_matcher_from_tree(ParseTreeNodeRef node) // "FullMatcher"
     {
-        auto node = expect_node(tree, "FullMatcher");
+        if (node->get_name() != "FullMatcher")
+            make_exception("Expected node with name 'FullMatcher', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto matcher = load_matcher_from_tree(node->get_children()[0]);
-        load_matcher_modifiers_from_tree(matcher, node->get_children()[1]);
-        load_matcher_actions_from_tree(matcher, node->get_children()[2]);
+        auto matcher = load_matcher_from_tree(get_child_node(node, "0"));
+        load_matcher_modifiers_from_tree(matcher, get_child_node(node, "MatcherModifiers"));
+        load_matcher_actions_from_tree(matcher, get_child_node(node, "MatcherActions"));
         return matcher;
     }
 
-    MatcherRef Grammar::load_matcher_from_tree(const ParseTreeRef tree)
+    MatcherRef Grammar::load_matcher_from_tree(ParseTreeNodeRef node)
     {
-        auto node = expect_node(tree);
-        
         if (node->get_name() == "MatchAnyChar")
             return std::make_shared<MatcherMatchAnyChar>();
         else if (node->get_name() == "MatchAll")
         {
             std::vector<MatcherRef> matchers;
             for (auto& child : node->get_children())
-                matchers.push_back(load_full_matcher_from_tree(child));
+                matchers.push_back(load_full_matcher_from_tree(expect_node(child, "FullMatcher")));
             
             auto matcher = std::make_shared<MatcherMatchAll>();
             matcher->set_matchers(matchers);
@@ -211,7 +213,7 @@ namespace qrawlr
         {
             std::vector<MatcherRef> matchers;
             for (auto& child : node->get_children())
-                matchers.push_back(load_full_matcher_from_tree(child));
+                matchers.push_back(load_full_matcher_from_tree(expect_node(child, "FullMatcher")));
             
             auto matcher = std::make_shared<MatcherMatchAny>(matchers);
             matcher->set_matchers(matchers);
@@ -219,24 +221,24 @@ namespace qrawlr
         }
         else if (node->get_name() == "MatchRange")
         {
-            auto& first = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
-            auto& last = get_leaf(get_node(node->get_children()[1])->get_children()[0])->get_value();
+            auto& first = get_child_leaf(node, "MatchRangeChar#0.0")->get_value();
+            auto& last = get_child_leaf(node, "MatchRangeChar#1.0")->get_value();
             return std::make_shared<MatcherMatchRange>(first, last);
         }
         else if (node->get_name() == "MatchExact")
         {
-            auto value = load_string_from_tree(node->get_children()[0]);
+            auto value = load_string_from_tree(get_child_node(node, "String"));
             return std::make_shared<MatcherMatchExact>(value);
         }
         else if (node->get_name() == "MatchRule")
         {
-            auto& rule_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
+            auto& rule_name = get_child_leaf(node, "Identifier.0")->get_value();
             return std::make_shared<MatcherMatchRule>(rule_name);
         }
         else if (node->get_name() == "MatchStack")
         {
-            auto& stack_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
-            auto index = load_integer_from_tree(node->get_children()[1]);
+            auto& stack_name = get_child_leaf(node, "Identifier.0")->get_value();
+            auto index = load_integer_from_tree(get_child_node(node, "Integer"));
             return std::make_shared<MatcherMatchStack>(stack_name, index);
         }
         else
@@ -245,16 +247,17 @@ namespace qrawlr
         }
     }
 
-    void Grammar::load_matcher_modifiers_from_tree(MatcherRef matcher, const ParseTreeRef tree)
+    void Grammar::load_matcher_modifiers_from_tree(MatcherRef matcher, ParseTreeNodeRef node) // "MatcherModifiers"
     {
-        auto node = expect_node(tree, "MatcherModifiers");
+        if (node->get_name() != "MatcherModifiers")
+            make_exception("Expected node with name 'MatcherModifiers', but got '" + node->get_name() + "'", node->get_pos_begin());
 
         for (auto& child : node->get_children())
         {
             if (is_node(child, "MatcherModifierInvert"))
                 matcher->get_flags().set(Matcher::Flags::Invert);
             else if (is_node(child, "MatcherModifierQuantifier"))
-                load_matcher_modifier_quantifier_from_tree(matcher, child);
+                load_matcher_modifier_quantifier_from_tree(matcher, get_node(child));
             else if (is_node(child, "MatcherModifierLookAhead"))
                 matcher->get_flags().set(Matcher::Flags::LookAhead);
             else if (is_node(child, "MatcherModifierLookBehind"))
@@ -262,7 +265,7 @@ namespace qrawlr
             else if (is_node(child, "MatcherModifierOmitMatch"))
                 matcher->get_flags().set(Matcher::Flags::OmitMatch);
             else if (is_node(child, "MatcherModifierReplaceMatch"))
-                load_matcher_modifier_replace_match_from_tree(matcher, child);
+                load_matcher_modifier_replace_match_from_tree(matcher, get_node(child));
             else if (is_node(child))
                 throw make_exception("Unexpected node in matcher modifiers", child->get_pos_begin());
             else
@@ -270,17 +273,16 @@ namespace qrawlr
         }
     }
 
-    void Grammar::load_matcher_modifier_quantifier_from_tree(MatcherRef matcher, const ParseTreeRef tree)
+    void Grammar::load_matcher_modifier_quantifier_from_tree(MatcherRef matcher, ParseTreeNodeRef node) // MatcherModifierQuantifier
     {
-        auto node = expect_node(tree, "MatcherModifierQuantifier");
-        node = get_node(node->get_children()[0]);
+        if (node->get_name() != "MatcherModifierQuantifier")
+            make_exception("Expected node with name 'MatcherModifierQuantifier', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        if (!node)
-            throw make_exception("Expected node in matcher quantifier", tree->get_pos_begin());
+        node = get_child_node(node, "0");
 
-        if (is_node(node, "QuantifierSymbolic"))
+        if (node->get_name() == "QuantifierSymbolic")
         {
-            const std::string& value = get_leaf(node->get_children()[0])->get_value();
+            auto& value = get_child_leaf(node, "0")->get_value();
             if (value == QUANTIFIER_ZERO_OR_ONE)
                 matcher->set_count_bounds(0, 1);
             else if (value == QUANTIFIER_ZERO_OR_MORE)
@@ -290,92 +292,97 @@ namespace qrawlr
             else
                 throw make_exception("Unknown quantifier '" + value + "'", node->get_pos_begin());
         }
-        else if (is_node(node, "QuantifierRange"))
+        else if (node->get_name() == "QuantifierRange")
         {
             matcher->set_count_bounds(
-                load_integer_from_tree(node->get_children()[0]),
-                load_integer_from_tree(node->get_children()[1])
+                load_integer_from_tree(get_child_node(node, "Integer#0")),
+                load_integer_from_tree(get_child_node(node, "Integer#1"))
             );
         }
-        else if (is_node(node, "QuantifierExact"))
+        else if (node->get_name() == "QuantifierExact")
         {
-            int count = load_integer_from_tree(node->get_children()[0]);
+            int count = load_integer_from_tree(get_child_node(node, "Integer"));
             matcher->set_count_bounds(count, count);
         }
-        else if (is_node(node, "QuantifierLowerBound"))
+        else if (node->get_name() == "QuantifierLowerBound")
         {
             matcher->set_count_bounds(
-                load_integer_from_tree(node->get_children()[0]) + 1,
+                load_integer_from_tree(get_child_node(node, "Integer")) + 1,
                 -1
             );
         }
-        else if (is_node(node, "QuantifierUpperBound"))
+        else if (node->get_name() == "QuantifierUpperBound")
         {
             matcher->set_count_bounds(
                 0,
-                load_integer_from_tree(node->get_children()[0]) - 1
+                load_integer_from_tree(get_child_node(node, "Integer")) - 1
             );
         }
         else
             throw make_exception("Unknown quantifier type", node->get_pos_begin());
     }
 
-    void Grammar::load_matcher_modifier_replace_match_from_tree(MatcherRef matcher, const ParseTreeRef tree)
+    void Grammar::load_matcher_modifier_replace_match_from_tree(MatcherRef matcher, ParseTreeNodeRef node) // "MatcherModifierReplaceMatch"
     {
-        auto node = expect_node(tree, "MatcherModifierReplaceMatch");
-        node = get_node(node->get_children()[0]);
+        if (node->get_name() != "MatcherModifierReplaceMatch")
+            make_exception("Expected node with name 'MatcherModifierReplaceMatch', but got '" + node->get_name() + "'", node->get_pos_begin());
+
+        node = get_child_node(node, "0");
 
         if (is_node(node, "Identifier"))
-            matcher->set_match_repl({ MatchReplacement::Type::Identifier, get_leaf(node->get_children()[0])->get_value() });
+            matcher->set_match_repl({ MatchReplacement::Type::Identifier, get_child_leaf(node, "0")->get_value() });
         else if (is_node(node, "String"))
             matcher->set_match_repl({ MatchReplacement::Type::String, load_string_from_tree(node) });
         else if (is_node(node, "MatchStack"))
             matcher->set_match_repl(
                 {
                     MatchReplacement::Type::Stack,
-                    get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value()
+                    get_child_leaf(node, "Identifier.0")->get_value()
                     + "." +
-                    std::to_string(load_integer_from_tree(node->get_children()[1]))
+                    std::to_string(load_integer_from_tree(get_child_node(node, "Integer")))
                 }
             );
         else
             throw make_exception("Unknown match replace type", node->get_pos_begin());
     }
 
-    void Grammar::load_matcher_actions_from_tree(MatcherRef matcher, const ParseTreeRef tree)
+    void Grammar::load_matcher_actions_from_tree(MatcherRef matcher, ParseTreeNodeRef node) // "MatcherActions"
     {
-        auto node = expect_node(tree, "MatcherActions");
+        if (node->get_name() != "MatcherActions")
+            make_exception("Expected node with name 'MatcherActions', but got '" + node->get_name() + "'", node->get_pos_begin());
 
         for (auto child : node->get_children())
-            load_matcher_trigger_from_tree(matcher, child);
+            load_matcher_trigger_from_tree(matcher, expect_node(child, "MatcherTrigger"));
     }
 
-    void Grammar::load_matcher_trigger_from_tree(MatcherRef matcher, const ParseTreeRef tree)
+    void Grammar::load_matcher_trigger_from_tree(MatcherRef matcher, ParseTreeNodeRef node) // "MatcherTrigger"
     {
-        auto node = expect_node(tree, "MatcherTrigger");
+        if (node->get_name() != "MatcherTrigger")
+            make_exception("Expected node with name 'MatcherTrigger', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto trigger_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
+        auto trigger_name = get_child_leaf(node, "Identifier.0")->get_value();
 
-        auto children = get_node(node->get_children()[1])->get_children();
+        auto children = get_child_node(node, "MatcherActionList")->get_children();
 
         for (auto child : children)
-            matcher->add_action(trigger_name, load_matcher_action_from_tree(child));
+            matcher->add_action(trigger_name, load_matcher_action_from_tree(expect_node(child, "MatcherAction")));
     }
 
-    Action Grammar::load_matcher_action_from_tree(const ParseTreeRef tree)
+    Action Grammar::load_matcher_action_from_tree(ParseTreeNodeRef node) // MatcherAction
     {
-        auto node = expect_node(tree, "MatcherAction");
+        if (node->get_name() != "MatcherAction")
+            make_exception("Expected node with name 'MatcherAction', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto action_name = get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value();
+        auto action_name = get_child_leaf(node, "Identifier.0")->get_value();
 
         Action action(action_name, {});
 
-        for (auto child : get_node(node->get_children()[1])->get_children())
+        for (auto child : get_child_node(node, "MatcherActionArgumentList")->get_children())
         {
             if (is_node(child, "Identifier"))
-                action.add_arg(Action::ArgType::Identifier, get_leaf(get_node(child)->get_children()[0])->get_value());
+                action.add_arg(Action::ArgType::Identifier, get_child_leaf(child, "0")->get_value());
             else if (is_node(child, "String"))
-                action.add_arg(Action::ArgType::String, load_string_from_tree(child));
+                action.add_arg(Action::ArgType::String, load_string_from_tree(get_node(child)));
             else if (is_node(child, "MatchedText"))
                 action.add_arg(Action::ArgType::Match, "");
             else
@@ -385,9 +392,11 @@ namespace qrawlr
         return action;
     }
 
-    std::string Grammar::load_string_from_tree(const ParseTreeRef tree)
+    std::string Grammar::load_string_from_tree(ParseTreeNodeRef node) // "String"
     {
-        auto node = expect_node(tree, "String");
+        if (node->get_name() != "String")
+            make_exception("Expected node with name 'String', but got '" + node->get_name() + "'", node->get_pos_begin());
+
         std::string result;
 
         for (auto& child : node->get_children())
@@ -395,7 +404,7 @@ namespace qrawlr
             if (is_leaf(child))
                 result += get_leaf(child)->get_value();
             else if (is_node(child, "EscapeSequence"))
-                result += load_escape_sequence_from_tree(child);
+                result += load_escape_sequence_from_tree(get_node(child));
             else
                 throw make_exception("Expected leaf or node with name 'EscapeSequence' in string", child->get_pos_begin());
         }
@@ -403,7 +412,7 @@ namespace qrawlr
         return result;
     }
 
-    std::string Grammar::load_escape_sequence_from_tree(const ParseTreeRef tree)
+    std::string Grammar::load_escape_sequence_from_tree(ParseTreeNodeRef node) // "EscapeSequence"
     {
         static const std::map<char, char> short_escapes = {
             {'a',  '\a'}, {'b',  '\b'},
@@ -414,8 +423,10 @@ namespace qrawlr
             {'\"', '\"'}
         };
 
-        auto node = expect_node(tree, "EscapeSequence");
-        auto& value = get_leaf(node->get_children()[0])->get_value();
+        if (node->get_name() != "EscapeSequence")
+            make_exception("Expected node with name 'EscapeSequence', but got '" + node->get_name() + "'", node->get_pos_begin());
+
+        auto& value = get_child_leaf(node, "0")->get_value();
 
         if (value.find('x') == 0)
             return std::string(1, (char)std::stoi(value.substr(1), nullptr, 16));
@@ -426,10 +437,13 @@ namespace qrawlr
         return std::string(1, short_escapes.at(value[0]));
     }
 
-    int Grammar::load_integer_from_tree(const ParseTreeRef tree)
+    int Grammar::load_integer_from_tree(ParseTreeNodeRef node) // "Integer"
     {
-        auto node = expect_node(tree, "Integer");
-        const std::string& base_str = get_node(node->get_children()[1])->get_name();
+        if (node->get_name() != "Integer")
+            make_exception("Expected node with name 'Integer', but got '" + node->get_name() + "'", node->get_pos_begin());
+
+        auto& base_str = get_child_node(node, "1")->get_name();
+
         int base;
         if (base_str == "FormatBin")
             base = 2;
@@ -442,7 +456,7 @@ namespace qrawlr
         else
             throw make_exception("Unknown integer base format '" + base_str + "'", node->get_pos_begin());
 
-        return std::stoi(get_leaf(node->get_children()[0])->get_value(), nullptr, base);
+        return std::stoi(get_child_leaf(node, "0")->get_value(), nullptr, base);
     }
 
     GrammarException Grammar::make_exception(const std::string& message, const Position& pos)
