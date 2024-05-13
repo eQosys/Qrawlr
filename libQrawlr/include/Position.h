@@ -10,6 +10,6 @@ namespace qrawlr
         int line;
         int column;
 
-        std::string to_string(const std::string& path);
+        std::string to_string(const std::string& path) const;
     };
 } // namespace qrawlr
