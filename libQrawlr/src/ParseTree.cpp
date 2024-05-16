@@ -277,7 +277,7 @@ namespace qrawlr
     //   sub: <identifier>
     //        <index>
     //        <identifier>#<index>
-    ParseTreeRef get_child(ParseTreeRef tree, const std::string& path)
+    ParseTreeRef expect_child(ParseTreeRef tree, const std::string& path)
     {
         size_t sub_begin = 0;
         size_t sub_end = path.find('.');
@@ -307,20 +307,59 @@ namespace qrawlr
         return tree;
     }
     
-    ParseTreeNodeRef get_child_node(ParseTreeRef tree, const std::string& path)
+    ParseTreeNodeRef expect_child_node(ParseTreeRef tree, const std::string& path)
     {
-        auto node = get_node(get_child(tree, path));
+        auto node = get_node(expect_child(tree, path));
         if (!node)
             throw GrammarException("Expected node but found leaf matching path '" + path + "'");
         return node;
     }
     
-    ParseTreeExactMatchRef get_child_leaf(ParseTreeRef tree, const std::string& path)
+    ParseTreeExactMatchRef expect_child_leaf(ParseTreeRef tree, const std::string& path)
     {
-        auto leaf = get_leaf(get_child(tree, path));
+        auto leaf = get_leaf(expect_child(tree, path));
         if (!leaf)
             throw GrammarException("Expected leaf but found node matching path '" + path + "'");
         return leaf;
+    }
+
+    bool has_child(ParseTreeRef tree, const std::string& path)
+    {
+        try
+        {
+            expect_child(tree, path);
+            return true;
+        }
+        catch (const GrammarException&)
+        {
+            return false;
+        }
+    }
+
+    bool has_child_node(ParseTreeRef tree, const std::string& path)
+    {
+        try
+        {
+            expect_child_node(tree, path);
+            return true;
+        }
+        catch (const GrammarException&)
+        {
+            return false;
+        }
+    }
+
+    bool has_child_leaf(ParseTreeRef tree, const std::string& path)
+    {
+        try
+        {
+            expect_child_leaf(tree, path);
+            return true;
+        }
+        catch (const GrammarException&)
+        {
+            return false;
+        }
     }
 
 } // namespace qrawlr

@@ -93,8 +93,11 @@ namespace qrawlr
     ParseTreeExactMatchRef get_leaf(ParseTreeRef tree);
     ParseTreeExactMatchRef expect_leaf(ParseTreeRef tree);
 
-    ParseTreeRef get_child(ParseTreeRef tree, const std::string& path);
-    ParseTreeNodeRef get_child_node(ParseTreeRef tree, const std::string& path);
-    ParseTreeExactMatchRef get_child_leaf(ParseTreeRef tree, const std::string& path);
+    ParseTreeRef expect_child(ParseTreeRef tree, const std::string& path);
+    ParseTreeNodeRef expect_child_node(ParseTreeRef tree, const std::string& path);
+    ParseTreeExactMatchRef expect_child_leaf(ParseTreeRef tree, const std::string& path);
+    bool has_child(ParseTreeRef tree, const std::string& path);
+    bool has_child_node(ParseTreeRef tree, const std::string& path);
+    bool has_child_leaf(ParseTreeRef tree, const std::string& path);
 
 } // namespace qrawlr

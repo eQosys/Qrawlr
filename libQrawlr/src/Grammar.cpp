@@ -103,8 +103,8 @@ namespace qrawlr
         if (node->get_name() != "RuleDefinition")
             make_exception("Expected node with name 'RuleDefinition', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        RuleRef rule = load_rule_header_from_tree(get_child_node(node, "RuleHeader"));
-        rule->set_matchers(load_rule_body_from_tree(get_child_node(node, "RuleBody")));
+        RuleRef rule = load_rule_header_from_tree(expect_child_node(node, "RuleHeader"));
+        rule->set_matchers(load_rule_body_from_tree(expect_child_node(node, "RuleBody")));
         return rule;
     }
 
@@ -117,7 +117,7 @@ namespace qrawlr
 
         rule->set_name(get_leaf(get_node(node->get_children()[0])->get_children()[0])->get_value());
 
-        rule->set_name(get_child_leaf(node, "Identifier.0")->get_value());
+        rule->set_name(expect_child_leaf(node, "Identifier.0")->get_value());
 
         if (m_rules.find(rule->get_name()) != m_rules.end())
             throw make_exception("Rule '" + rule->get_name() + "' already defined", node->get_pos_begin());
@@ -136,7 +136,7 @@ namespace qrawlr
         if (node->get_name() != "RuleModifier")
             make_exception("Expected node with name 'RuleModifier', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto modifier_name = get_child_leaf(node, "0")->get_value();
+        auto modifier_name = expect_child_leaf(node, "0")->get_value();
 
         if (modifier_name == "hidden")
             rule->get_rule_flags().set(Rule::Flags::Anonymous);
@@ -189,9 +189,9 @@ namespace qrawlr
         if (node->get_name() != "FullMatcher")
             make_exception("Expected node with name 'FullMatcher', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto matcher = load_matcher_from_tree(get_child_node(node, "0"));
-        load_matcher_modifiers_from_tree(matcher, get_child_node(node, "MatcherModifiers"));
-        load_matcher_actions_from_tree(matcher, get_child_node(node, "MatcherActions"));
+        auto matcher = load_matcher_from_tree(expect_child_node(node, "0"));
+        load_matcher_modifiers_from_tree(matcher, expect_child_node(node, "MatcherModifiers"));
+        load_matcher_actions_from_tree(matcher, expect_child_node(node, "MatcherActions"));
         return matcher;
     }
 
@@ -221,24 +221,24 @@ namespace qrawlr
         }
         else if (node->get_name() == "MatchRange")
         {
-            auto& first = get_child_leaf(node, "MatchRangeChar#0.0")->get_value();
-            auto& last = get_child_leaf(node, "MatchRangeChar#1.0")->get_value();
+            auto& first = expect_child_leaf(node, "MatchRangeChar#0.0")->get_value();
+            auto& last = expect_child_leaf(node, "MatchRangeChar#1.0")->get_value();
             return std::make_shared<MatcherMatchRange>(first, last);
         }
         else if (node->get_name() == "MatchExact")
         {
-            auto value = load_string_from_tree(get_child_node(node, "String"));
+            auto value = load_string_from_tree(expect_child_node(node, "String"));
             return std::make_shared<MatcherMatchExact>(value);
         }
         else if (node->get_name() == "MatchRule")
         {
-            auto& rule_name = get_child_leaf(node, "Identifier.0")->get_value();
+            auto& rule_name = expect_child_leaf(node, "Identifier.0")->get_value();
             return std::make_shared<MatcherMatchRule>(rule_name);
         }
         else if (node->get_name() == "MatchStack")
         {
-            auto& stack_name = get_child_leaf(node, "Identifier.0")->get_value();
-            auto index = load_integer_from_tree(get_child_node(node, "Integer"));
+            auto& stack_name = expect_child_leaf(node, "Identifier.0")->get_value();
+            auto index = load_integer_from_tree(expect_child_node(node, "Integer"));
             return std::make_shared<MatcherMatchStack>(stack_name, index);
         }
         else
@@ -278,11 +278,11 @@ namespace qrawlr
         if (node->get_name() != "MatcherModifierQuantifier")
             make_exception("Expected node with name 'MatcherModifierQuantifier', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        node = get_child_node(node, "0");
+        node = expect_child_node(node, "0");
 
         if (node->get_name() == "QuantifierSymbolic")
         {
-            auto& value = get_child_leaf(node, "0")->get_value();
+            auto& value = expect_child_leaf(node, "0")->get_value();
             if (value == QUANTIFIER_ZERO_OR_ONE)
                 matcher->set_count_bounds(0, 1);
             else if (value == QUANTIFIER_ZERO_OR_MORE)
@@ -295,19 +295,19 @@ namespace qrawlr
         else if (node->get_name() == "QuantifierRange")
         {
             matcher->set_count_bounds(
-                load_integer_from_tree(get_child_node(node, "Integer#0")),
-                load_integer_from_tree(get_child_node(node, "Integer#1"))
+                load_integer_from_tree(expect_child_node(node, "Integer#0")),
+                load_integer_from_tree(expect_child_node(node, "Integer#1"))
             );
         }
         else if (node->get_name() == "QuantifierExact")
         {
-            int count = load_integer_from_tree(get_child_node(node, "Integer"));
+            int count = load_integer_from_tree(expect_child_node(node, "Integer"));
             matcher->set_count_bounds(count, count);
         }
         else if (node->get_name() == "QuantifierLowerBound")
         {
             matcher->set_count_bounds(
-                load_integer_from_tree(get_child_node(node, "Integer")) + 1,
+                load_integer_from_tree(expect_child_node(node, "Integer")) + 1,
                 -1
             );
         }
@@ -315,7 +315,7 @@ namespace qrawlr
         {
             matcher->set_count_bounds(
                 0,
-                load_integer_from_tree(get_child_node(node, "Integer")) - 1
+                load_integer_from_tree(expect_child_node(node, "Integer")) - 1
             );
         }
         else
@@ -327,19 +327,19 @@ namespace qrawlr
         if (node->get_name() != "MatcherModifierReplaceMatch")
             make_exception("Expected node with name 'MatcherModifierReplaceMatch', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        node = get_child_node(node, "0");
+        node = expect_child_node(node, "0");
 
         if (is_node(node, "Identifier"))
-            matcher->set_match_repl({ MatchReplacement::Type::Identifier, get_child_leaf(node, "0")->get_value() });
+            matcher->set_match_repl({ MatchReplacement::Type::Identifier, expect_child_leaf(node, "0")->get_value() });
         else if (is_node(node, "String"))
             matcher->set_match_repl({ MatchReplacement::Type::String, load_string_from_tree(node) });
         else if (is_node(node, "MatchStack"))
             matcher->set_match_repl(
                 {
                     MatchReplacement::Type::Stack,
-                    get_child_leaf(node, "Identifier.0")->get_value()
+                    expect_child_leaf(node, "Identifier.0")->get_value()
                     + "." +
-                    std::to_string(load_integer_from_tree(get_child_node(node, "Integer")))
+                    std::to_string(load_integer_from_tree(expect_child_node(node, "Integer")))
                 }
             );
         else
@@ -360,9 +360,9 @@ namespace qrawlr
         if (node->get_name() != "MatcherTrigger")
             make_exception("Expected node with name 'MatcherTrigger', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto trigger_name = get_child_leaf(node, "Identifier.0")->get_value();
+        auto trigger_name = expect_child_leaf(node, "Identifier.0")->get_value();
 
-        auto children = get_child_node(node, "MatcherActionList")->get_children();
+        auto children = expect_child_node(node, "MatcherActionList")->get_children();
 
         for (auto child : children)
             matcher->add_action(trigger_name, load_matcher_action_from_tree(expect_node(child, "MatcherAction")));
@@ -373,14 +373,14 @@ namespace qrawlr
         if (node->get_name() != "MatcherAction")
             make_exception("Expected node with name 'MatcherAction', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto action_name = get_child_leaf(node, "Identifier.0")->get_value();
+        auto action_name = expect_child_leaf(node, "Identifier.0")->get_value();
 
         Action action(action_name, {});
 
-        for (auto child : get_child_node(node, "MatcherActionArgumentList")->get_children())
+        for (auto child : expect_child_node(node, "MatcherActionArgumentList")->get_children())
         {
             if (is_node(child, "Identifier"))
-                action.add_arg(Action::ArgType::Identifier, get_child_leaf(child, "0")->get_value());
+                action.add_arg(Action::ArgType::Identifier, expect_child_leaf(child, "0")->get_value());
             else if (is_node(child, "String"))
                 action.add_arg(Action::ArgType::String, load_string_from_tree(get_node(child)));
             else if (is_node(child, "MatchedText"))
@@ -426,7 +426,7 @@ namespace qrawlr
         if (node->get_name() != "EscapeSequence")
             make_exception("Expected node with name 'EscapeSequence', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto& value = get_child_leaf(node, "0")->get_value();
+        auto& value = expect_child_leaf(node, "0")->get_value();
 
         if (value.find('x') == 0)
             return std::string(1, (char)std::stoi(value.substr(1), nullptr, 16));
@@ -442,7 +442,7 @@ namespace qrawlr
         if (node->get_name() != "Integer")
             make_exception("Expected node with name 'Integer', but got '" + node->get_name() + "'", node->get_pos_begin());
 
-        auto& base_str = get_child_node(node, "1")->get_name();
+        auto& base_str = expect_child_node(node, "1")->get_name();
 
         int base;
         if (base_str == "FormatBin")
@@ -456,7 +456,7 @@ namespace qrawlr
         else
             throw make_exception("Unknown integer base format '" + base_str + "'", node->get_pos_begin());
 
-        return std::stoi(get_child_leaf(node, "0")->get_value(), nullptr, base);
+        return std::stoi(expect_child_leaf(node, "0")->get_value(), nullptr, base);
     }
 
     GrammarException Grammar::make_exception(const std::string& message, const Position& pos)
