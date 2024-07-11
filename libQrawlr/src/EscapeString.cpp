@@ -6,7 +6,7 @@ namespace qrawlr
     {
         std::string result;
 
-        for (size_t i = 0; i < str.size(); ++i)
+        for (std::size_t i = 0; i < str.size(); ++i)
         {
             char c = str[i];
 

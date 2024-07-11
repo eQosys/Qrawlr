@@ -13,16 +13,16 @@ namespace qrawlr
 
     int ParseTree::s_last_id = 0;
 
-    ParseTree::ParseTree()
-        : ParseTree(Position())
+    ParseTree::ParseTree(int tree_id)
+        : ParseTree(tree_id, Position())
     {}
 
-    ParseTree::ParseTree(const Position& pos_begin)
-        : ParseTree(pos_begin, pos_begin)
+    ParseTree::ParseTree(int tree_id, const Position& pos_begin)
+        : ParseTree(tree_id, pos_begin, pos_begin)
     {}
 
-    ParseTree::ParseTree(const Position& pos_begin, const Position& pos_end)
-        : m_id(++s_last_id),
+    ParseTree::ParseTree(int tree_id, const Position& pos_begin, const Position& pos_end)
+        : m_id(++s_last_id), m_tree_id(tree_id),
         m_pos_begin(pos_begin), m_pos_end(pos_end)
     {}
 
@@ -56,8 +56,8 @@ namespace qrawlr
 
     // -------------------- ParseTreeNode -------------------- //
 
-    ParseTreeNode::ParseTreeNode(const Position& pos_begin)
-        : ParseTree(pos_begin)
+    ParseTreeNode::ParseTreeNode(int tree_id, const Position& pos_begin)
+        : ParseTree(tree_id, pos_begin)
     {}
 
     std::string ParseTreeNode::to_string() const
@@ -109,12 +109,12 @@ namespace qrawlr
 
     // -------------------- ParseTreeExactMatch -------------------- //
 
-    ParseTreeExactMatch::ParseTreeExactMatch()
-        : ParseTree()
+    ParseTreeExactMatch::ParseTreeExactMatch(int tree_id)
+        : ParseTree(tree_id)
     {}
 
-    ParseTreeExactMatch::ParseTreeExactMatch(const std::string& value, const Position& pos_begin, const Position& pos_end)
-        : ParseTree(pos_begin, pos_end),
+    ParseTreeExactMatch::ParseTreeExactMatch(const std::string& value, int tree_id, const Position& pos_begin, const Position& pos_end)
+        : ParseTree(tree_id, pos_begin, pos_end),
         m_value(value)
     {}
 
@@ -206,7 +206,7 @@ namespace qrawlr
 
     bool parse_get_child_path_elem(const std::string& elem, std::string& name_out, int& index_out)
     {
-        size_t selective_index = elem.find('#');
+        std::size_t selective_index = elem.find('#');
         if (selective_index == elem.npos) // Format is either <identifier> or <index>
         {
             std::stringstream ss(elem);
@@ -279,8 +279,8 @@ namespace qrawlr
     //        <identifier>#<index>
     ParseTreeRef expect_child(ParseTreeRef tree, const std::string& path)
     {
-        size_t sub_begin = 0;
-        size_t sub_end = path.find('.');
+        std::size_t sub_begin = 0;
+        std::size_t sub_end = path.find('.');
         do
         {
             // retrieve a single element from the path (e.g. directory)

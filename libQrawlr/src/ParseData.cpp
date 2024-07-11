@@ -7,7 +7,7 @@
 namespace qrawlr
 {
     ParseData::ParseData(const std::string& text, const std::string& filename, const std::map<std::string, RuleRef>& rules)
-        : m_text(text), m_filename(filename), m_rules(rules),
+        : m_tree_id(++s_tree_id), m_text(text), m_filename(filename), m_rules(rules),
         m_stacks(), m_stack_histories(),
         m_farthest_match_index(0)
     {
@@ -36,7 +36,7 @@ namespace qrawlr
         {
             auto& stack = get_stack(name);
             auto& history = get_stack_history(name);
-            while (stack.size() > (size_t)size)
+            while (stack.size() > (std::size_t)size)
             {
                 auto item = history.back();
                 history.pop_back();
@@ -77,7 +77,7 @@ namespace qrawlr
     {
         m_newline_indices.clear();
         m_newline_indices.push_back(-1);
-        for (size_t i = 0; i < m_text.size(); ++i)
+        for (std::size_t i = 0; i < m_text.size(); ++i)
             if (m_text[i] == '\n')
                 m_newline_indices.push_back(i);
     }

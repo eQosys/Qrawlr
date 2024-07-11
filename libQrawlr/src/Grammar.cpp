@@ -58,7 +58,7 @@ namespace qrawlr
 
         auto result = g.apply_to(text, "Grammar", filename);
         
-        if (result.tree == nullptr || (size_t)result.pos_end.index < text.size())
+        if (result.tree == nullptr || (std::size_t)result.pos_end.index < text.size())
             throw GrammarException("Failed to parse provided grammar file", filename + ":" + std::to_string(result.pos_end.line) + ":" + std::to_string(result.pos_end.column));
 
         g.load_from_tree(expect_node(result.tree, "Grammar"), filename);

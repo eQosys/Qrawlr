@@ -102,7 +102,7 @@ int main(int argc, char** argv)
     }
 
     std::string grammar_input = argv[2];
-    size_t colon_pos = grammar_input.find_last_of(':');
+    std::size_t colon_pos = grammar_input.find_last_of(':');
     if (colon_pos == std::string::npos)
     {
         printf("Missing argument <entry_point>\n");

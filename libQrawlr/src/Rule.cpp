@@ -33,7 +33,7 @@ namespace qrawlr
             if (!flags.empty())
             {
                 header_str += "(";
-                for (size_t i = 0; i < flags.size(); ++i)
+                for (std::size_t i = 0; i < flags.size(); ++i)
                 {
                     if (i > 0)
                         header_str += " ";
@@ -59,7 +59,7 @@ namespace qrawlr
         if (!node)
             return;
 
-        size_t i = 0;
+        std::size_t i = 0;
         std::shared_ptr<ParseTreeExactMatch> prevLeaf;
         while (i < node->get_children().size())
         {
