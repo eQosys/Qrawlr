@@ -13,16 +13,12 @@ namespace qrawlr
 
     int ParseTree::s_last_id = 0;
 
-    ParseTree::ParseTree(int tree_id)
-        : ParseTree(tree_id, Position())
+    ParseTree::ParseTree(const Position& pos)
+        : ParseTree(pos, pos)
     {}
 
-    ParseTree::ParseTree(int tree_id, const Position& pos_begin)
-        : ParseTree(tree_id, pos_begin, pos_begin)
-    {}
-
-    ParseTree::ParseTree(int tree_id, const Position& pos_begin, const Position& pos_end)
-        : m_id(++s_last_id), m_tree_id(tree_id),
+    ParseTree::ParseTree(const Position& pos_begin, const Position& pos_end)
+        : m_id(++s_last_id),
         m_pos_begin(pos_begin), m_pos_end(pos_end)
     {}
 
@@ -56,8 +52,8 @@ namespace qrawlr
 
     // -------------------- ParseTreeNode -------------------- //
 
-    ParseTreeNode::ParseTreeNode(int tree_id, const Position& pos_begin)
-        : ParseTree(tree_id, pos_begin)
+    ParseTreeNode::ParseTreeNode(const Position& pos_begin)
+        : ParseTree(pos_begin)
     {}
 
     std::string ParseTreeNode::to_string() const
@@ -109,12 +105,8 @@ namespace qrawlr
 
     // -------------------- ParseTreeExactMatch -------------------- //
 
-    ParseTreeExactMatch::ParseTreeExactMatch(int tree_id)
-        : ParseTree(tree_id)
-    {}
-
-    ParseTreeExactMatch::ParseTreeExactMatch(const std::string& value, int tree_id, const Position& pos_begin, const Position& pos_end)
-        : ParseTree(tree_id, pos_begin, pos_end),
+    ParseTreeExactMatch::ParseTreeExactMatch(const std::string& value, const Position& pos_begin, const Position& pos_end)
+        : ParseTree(pos_begin, pos_end),
         m_value(value)
     {}
 

@@ -15,14 +15,13 @@ namespace qrawlr
     class ParseTree
     {
     public:
-        ParseTree(int tree_id);
-        ParseTree(int tree_id, const Position& pos_begin);
-        ParseTree(int tree_id, const Position& pos_begin, const Position& pos_end);
+        ParseTree() = delete;
+        ParseTree(const Position& pos);
+        ParseTree(const Position& pos_begin, const Position& pos_end);
         virtual ~ParseTree() = default;
     public:
         std::string to_digraph_str(bool verbose) const;
     public:
-        int get_tree_id() const { return m_tree_id; }
         const Position& get_pos_begin() const { return m_pos_begin; }
         const Position& get_pos_end() const { return m_pos_end; }
         void set_pos_end(const Position& pos_end) { m_pos_end = pos_end; }
@@ -34,7 +33,6 @@ namespace qrawlr
         virtual void to_digraph_impl(std::string& graph, bool verbose) const = 0;
     protected:
         int m_id;
-        const int m_tree_id;
         Position m_pos_begin;
         Position m_pos_end;
     private:
@@ -46,8 +44,8 @@ namespace qrawlr
     class ParseTreeNode : public ParseTree
     {
     public:
-        ParseTreeNode() = default;
-        ParseTreeNode(int tree_id, const Position& pos_begin);
+        ParseTreeNode() = delete;
+        ParseTreeNode(const Position& pos_begin);
         virtual ~ParseTreeNode() = default;
     public:
         virtual std::string to_string() const override;
@@ -60,7 +58,7 @@ namespace qrawlr
         std::vector<ParseTreeRef>& get_children() { return m_children; }
         const std::vector<ParseTreeRef>& get_children() const { return m_children; }
     public:
-        static std::shared_ptr<ParseTreeNode> make(int tree_id, const Position& pos_begin) { return std::make_shared<ParseTreeNode>(tree_id, pos_begin);}
+        static std::shared_ptr<ParseTreeNode> make(const Position& pos_begin) { return std::make_shared<ParseTreeNode>(pos_begin);}
     protected:
         std::string m_name;
         std::vector<ParseTreeRef> m_children;
@@ -69,8 +67,8 @@ namespace qrawlr
     class ParseTreeExactMatch : public ParseTree
     {
     public:
-        ParseTreeExactMatch(int tree_id);
-        ParseTreeExactMatch(const std::string& value, int tree_id, const Position& pos_begin, const Position& pos_end);
+        ParseTreeExactMatch() = delete;
+        ParseTreeExactMatch(const std::string& value, const Position& pos_begin, const Position& pos_end);
         virtual ~ParseTreeExactMatch() = default;
     public:
         virtual std::string to_string() const override;
@@ -80,7 +78,7 @@ namespace qrawlr
         std::string& get_value() { return m_value; }
         const std::string& get_value() const { return m_value; }
     public:
-        static std::shared_ptr<ParseTreeExactMatch> make(const std::string& value, int tree_id, const Position& pos_begin, const Position& pos_end) { return std::make_shared<ParseTreeExactMatch>(value, tree_id, pos_begin, pos_end); }
+        static std::shared_ptr<ParseTreeExactMatch> make(const std::string& value, const Position& pos_begin, const Position& pos_end) { return std::make_shared<ParseTreeExactMatch>(value, pos_begin, pos_end); }
     protected:
         std::string m_value;
     };

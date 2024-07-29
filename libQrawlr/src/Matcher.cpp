@@ -30,7 +30,7 @@ namespace qrawlr
         auto checkpoint = data.get_checkpoint();
 
         MatchResult sub_result;
-        auto base_tree = ParseTreeNode::make(data.get_tree_id(), data.get_position(index));
+        auto base_tree = ParseTreeNode::make(data.get_position(index));
         while (true)
         {
             sub_result = match_impl(data, index);
@@ -54,7 +54,7 @@ namespace qrawlr
         {
             run_actions_for_trigger(TRIGGER_ON_FAIL, nullptr, data, index_old);
             data.restore_checkpoint(checkpoint);
-            return { nullptr, { index_old, 0, 0 } };
+            return { nullptr, data.get_position(index_old) };
         }
 
         if (m_flags.is_set(Flags::LookAhead))
@@ -67,7 +67,7 @@ namespace qrawlr
 
         tree = apply_optional_match_repl(tree, data, index_old);
 
-        return { tree, { index, 0, 0 } };
+        return { tree, data.get_position(index) };
     }
 
     void Matcher::add_action(const std::string& trigger, const Action& action)
@@ -205,9 +205,16 @@ namespace qrawlr
         int index_next = index_old + 1;
 
         if (tree == nullptr && !data.eof(index_old))
-            return { ParseTreeExactMatch::make(data.get_text().substr(index_old, 1), data.get_tree_id(), data.get_position(index_old), data.get_position(index_next)), { index_next, 0, 0 } };
+            return {
+                ParseTreeExactMatch::make(
+                    data.get_text().substr(index_old, 1),
+                    data.get_position(index_old),
+                    data.get_position(index_next)
+                ),
+                data.get_position(index_next)
+            };
 
-        return { nullptr, { index_old, 0, 0 } };
+        return { nullptr, data.get_position(index_old) };
     }
 
     ParseTreeRef Matcher::apply_optional_match_repl(ParseTreeRef tree, ParseData& data, int index) const
@@ -216,7 +223,11 @@ namespace qrawlr
             return tree;
 
         if (m_match_repl.type == MatchReplacement::Type::String)
-            return ParseTreeExactMatch::make(m_match_repl.value, data.get_tree_id(), data.get_position(index), data.get_position(index));
+            return ParseTreeExactMatch::make(
+                m_match_repl.value,
+                data.get_position(index),
+                data.get_position(index)
+            );
 
         if (m_match_repl.type == MatchReplacement::Type::Identifier)
         {
@@ -237,7 +248,11 @@ namespace qrawlr
 
             std::string value = ((std::size_t)stack_index < stack.size()) ? stack[stack.size() - stack_index - 1] : "";
 
-            return ParseTreeExactMatch::make(value, data.get_tree_id(), data.get_position(index), data.get_position(index));
+            return ParseTreeExactMatch::make(
+                value,
+                data.get_position(index),
+                data.get_position(index)
+            );
         }
 
         throw GrammarException("Invalid match replacement type");
@@ -262,11 +277,18 @@ namespace qrawlr
     MatchResult MatcherMatchAnyChar::match_impl(ParseData& data, int index) const
     {
         if (data.eof(index))
-            return { nullptr, { index, 0, 0 } };
+            return { nullptr, data.get_position(index) };
 
         int index_next = index + 1;
 
-        return { ParseTreeExactMatch::make(data.get_text().substr(index, 1), data.get_tree_id(), data.get_position(index), data.get_position(index_next)), { index_next, 0, 0 } };
+        return {
+            ParseTreeExactMatch::make(
+                data.get_text().substr(index, 1),
+                data.get_position(index),
+                data.get_position(index_next)
+            ),
+            data.get_position(index_next)
+        };
     }
 
     std::string MatcherMatchAnyChar::to_string_impl() const
@@ -308,16 +330,16 @@ namespace qrawlr
         {
             auto result = matcher->match(data, index);
             if (!result.tree)
-                return { nullptr, { index_old, 0, 0 } };
+                return { nullptr, data.get_position(index_old) };
             children.push_back(result.tree);
             index = result.pos_end.index;
         }
 
-        auto node = ParseTreeNode::make(data.get_tree_id(), data.get_position(index_old));
+        auto node = ParseTreeNode::make(data.get_position(index_old));
         for (const auto& child : children)
             node->add_child(child, m_flags.is_set(Flags::OmitMatch));
 
-        return { node, { index, 0, 0 } };
+        return { node, data.get_position(index) };
     }
 
     std::string MatcherMatchAll::to_string_impl() const
@@ -354,7 +376,7 @@ namespace qrawlr
                 return result;
         }
 
-        return { nullptr, { index, 0, 0 } };
+        return { nullptr, data.get_position(index) };
     }
 
     std::string MatcherMatchAny::to_string_impl() const
@@ -384,16 +406,23 @@ namespace qrawlr
     MatchResult MatcherMatchRange::match_impl(ParseData& data, int index) const
     {
         if (data.eof(index))
-            return { nullptr, { index, 0, 0 } };
+            return { nullptr, data.get_position(index) };
 
         std::string text = data.get_text().substr(index, 1);
 
         if (text < m_first || text > m_last)
-            return { nullptr, { index, 0, 0 } };
+            return { nullptr, data.get_position(index) };
 
         int index_next = index + text.size();
 
-        return { ParseTreeExactMatch::make(text, data.get_tree_id(), data.get_position(index), data.get_position(index_next)), { index_next, 0, 0 } };
+        return {
+            ParseTreeExactMatch::make(
+                text,
+                data.get_position(index),
+                data.get_position(index_next)
+            ),
+            data.get_position(index_next)
+        };
     }
 
     std::string MatcherMatchRange::to_string_impl() const
@@ -412,14 +441,21 @@ namespace qrawlr
     MatchResult MatcherMatchExact::match_impl(ParseData& data, int index) const
     {
         if (data.eof(index))
-            return { nullptr, { index, 0, 0 } };
+            return { nullptr, data.get_position(index) };
 
         if (data.get_text().substr(index, m_exact.size()) != m_exact)
-            return { nullptr, { index, 0, 0 } };
+            return { nullptr, data.get_position(index) };
 
         int index_next = index + m_exact.size();
 
-        return { ParseTreeExactMatch::make(m_exact, data.get_tree_id(), data.get_position(index), data.get_position(index_next)), { index_next, 0, 0 } };
+        return {
+            ParseTreeExactMatch::make(
+                m_exact,
+                data.get_position(index),
+                data.get_position(index_next)
+            ),
+            data.get_position(index_next)
+        };
     }
 
     std::string MatcherMatchExact::to_string_impl() const
@@ -471,10 +507,17 @@ namespace qrawlr
         std::string value_to_match = ((std::size_t)m_index < stack.size()) ? stack[stack.size() - m_index - 1] : "";
 
         if (data.get_text().substr(index, value_to_match.size()) != value_to_match)
-            return { nullptr, { index, 0, 0 } };
+            return { nullptr, data.get_position(index) };
 
         int index_next = index + value_to_match.size();
-        return { ParseTreeExactMatch::make(value_to_match, data.get_tree_id(), data.get_position(index), data.get_position(index_next)), { index_next, 0, 0 } };
+        return {
+            ParseTreeExactMatch::make(
+                value_to_match,
+                data.get_position(index),
+                data.get_position(index_next)
+            ),
+            data.get_position(index_next)
+        };
     }
 
     std::string MatcherMatchStack::to_string_impl() const

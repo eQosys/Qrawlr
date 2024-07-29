@@ -55,7 +55,7 @@ namespace qrawlr
     {
         int line = std::lower_bound(m_newline_indices.begin(), m_newline_indices.end(), index) - m_newline_indices.begin();
         int column = index - m_newline_indices[line - 1];
-        return { index, line, column };
+        return { m_tree_id, index, line, column };
     }
 
     std::string ParseData::get_position_string(int index) const
