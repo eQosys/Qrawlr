@@ -289,8 +289,10 @@ namespace qrawlr
             if (!parse_get_child_path_elem(elem, name, index))
                 throw GrammarException("Invalid index provided in 'get_child'. (path: " + path + ", elem: " + elem + ")", tree->get_pos_begin().to_string(tree_id_to_name));
             
-            if (!(tree = find_get_child_child(node, name, index)))
+            auto newTree = find_get_child_child(node, name, index);
+            if (!newTree)
                 throw GrammarException("Could not find matching child in 'get_child'. (path: " + path + ", elem: " + elem + ")", tree->get_pos_begin().to_string(tree_id_to_name));
+            tree = newTree;
 
             sub_begin = sub_end + 1;
             sub_end = path.find('.', sub_begin);
