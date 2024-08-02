@@ -87,15 +87,15 @@ namespace qrawlr
     bool is_node(ParseTreeRef tree, const std::string& name);
     ParseTreeNodeRef get_node(ParseTreeRef tree);
     ParseTreeNodeRef get_node(ParseTreeRef tree, const std::string& name);
-    ParseTreeNodeRef expect_node(ParseTreeRef tree);
-    ParseTreeNodeRef expect_node(ParseTreeRef tree, const std::string& name);
+    ParseTreeNodeRef expect_node(ParseTreeRef tree, std::function<std::string(int)> tree_id_to_name);
+    ParseTreeNodeRef expect_node(ParseTreeRef tree, const std::string& name, std::function<std::string(int)> tree_id_to_name);
     bool is_leaf(ParseTreeRef tree);
     ParseTreeExactMatchRef get_leaf(ParseTreeRef tree);
-    ParseTreeExactMatchRef expect_leaf(ParseTreeRef tree);
+    ParseTreeExactMatchRef expect_leaf(ParseTreeRef tree, std::function<std::string(int)> tree_id_to_name);
 
-    ParseTreeRef expect_child(ParseTreeRef tree, const std::string& path);
-    ParseTreeNodeRef expect_child_node(ParseTreeRef tree, const std::string& path);
-    ParseTreeExactMatchRef expect_child_leaf(ParseTreeRef tree, const std::string& path);
+    ParseTreeRef expect_child(ParseTreeRef tree, const std::string& path, std::function<std::string(int)> tree_id_to_name);
+    ParseTreeNodeRef expect_child_node(ParseTreeRef tree, const std::string& path, std::function<std::string(int)> tree_id_to_name);
+    ParseTreeExactMatchRef expect_child_leaf(ParseTreeRef tree, const std::string& path, std::function<std::string(int)> tree_id_to_name);
     bool has_child(ParseTreeRef tree, const std::string& path);
     bool has_child_node(ParseTreeRef tree, const std::string& path);
     bool has_child_leaf(ParseTreeRef tree, const std::string& path);

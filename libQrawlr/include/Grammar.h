@@ -43,13 +43,12 @@ namespace qrawlr
         std::string load_escape_sequence_from_tree(ParseTreeNodeRef node);
         int load_integer_from_tree(ParseTreeNodeRef node);
     private:
-        static Grammar load_internal_grammar();
-    private:
-        GrammarException make_exception(const std::string& message, const Position& pos);
+        GrammarException make_node_exception(const std::string& message, ParseTreeRef node);
     private:
         std::map<std::string, RuleRef> m_rules;
         std::string m_filename;
+        std::function<std::string(int)> m_f_tree_id_to_name;
     private:
-        friend Grammar load_internal_grammar();
+        static Grammar load_internal_grammar();
     };
 }; // namespace qrawlr
