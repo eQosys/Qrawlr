@@ -26,7 +26,11 @@ std::string get_dot_command_str(const std::string& input_file, const std::string
 
 std::string gen_temp_file_path()
 {
+#if defined(QRAWLR_PLATFORM_UNIX)
     return "/tmp/qrawlr-" + std::to_string(std::rand()) + ".tmp";
+#elif defined(QRAWLR_PLATFORM_WIN32)
+	return ".\\qrawlr-" + std::to_string(std::rand()) + ".tmp";
+#endif
 }
 
 qrawlr::MatchResult apply_grammar_to_file(const std::string& grammar_file, const std::string& entry_point, const std::string& input_file, int* p_text_length = nullptr)

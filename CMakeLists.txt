@@ -9,7 +9,12 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+if(UNIX)
+    set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+    add_definitions(-DQRAWLR_PLATFORM_UNIX)
+elseif (WIN32)
+    add_definitions(-DQRAWLR_PLATFORM_WIN32)
+endif()
 
 add_subdirectory("libQrawlr")
 
