@@ -11,14 +11,14 @@ namespace qrawlr
 {
     // -------------------- ParseTree -------------------- //
 
-    int ParseTree::s_last_id = 0;
+    int ParseTree::s_last_node_id = 0;
 
     ParseTree::ParseTree(const Position& pos)
         : ParseTree(pos, pos)
     {}
 
     ParseTree::ParseTree(const Position& pos_begin, const Position& pos_end)
-        : m_id(++s_last_id),
+        : m_node_id(++s_last_node_id),
         m_pos_begin(pos_begin), m_pos_end(pos_end)
     {}
 
@@ -73,7 +73,7 @@ namespace qrawlr
         text += get_optional_verbose_info(verbose);
 
         graph += "\t";
-        graph += std::to_string(m_id);
+        graph += std::to_string(m_node_id);
         graph += " [label=\"";
         graph += escape_string(text);
         graph += "\" shape=ellipse]\n";
@@ -82,9 +82,9 @@ namespace qrawlr
         {
             child->to_digraph_impl(graph, verbose);
             graph += "\t";
-            graph += std::to_string(m_id);
+            graph += std::to_string(m_node_id);
             graph += " -> ";
-            graph += std::to_string(child->m_id);
+            graph += std::to_string(child->m_node_id);
             graph += "\n";
         }
     }
@@ -124,7 +124,7 @@ namespace qrawlr
         text += get_optional_verbose_info(verbose);
 
         graph += "\t";
-        graph += std::to_string(m_id);
+        graph += std::to_string(m_node_id);
         graph += " [label=\"";
         graph += escape_string(text);
         graph += "\" shape=plaintext]\n";
@@ -159,20 +159,20 @@ namespace qrawlr
         return node;
     }
 
-    ParseTreeNodeRef expect_node(ParseTreeRef tree, std::function<std::string(int)> tree_id_to_name)
+    ParseTreeNodeRef expect_node(ParseTreeRef tree)
     {
         auto node = get_node(tree);
         if (!node)
-            throw GrammarException("[*expect_node*]: Expected node in grammar tree", tree->get_pos_begin().to_string(tree_id_to_name));
+            throw GrammarException("[*expect_node*]: Expected node in grammar tree", tree->get_pos_begin());
             
         return node;
     }
     
-    ParseTreeNodeRef expect_node(ParseTreeRef tree, const std::string& name, std::function<std::string(int)> tree_id_to_name)
+    ParseTreeNodeRef expect_node(ParseTreeRef tree, const std::string& name)
     {
         auto node = get_node(tree, name);
         if (!node)
-            throw GrammarException("[*expect_node*]: Expected node with name '" + name + "' in grammar tree", tree->get_pos_begin().to_string(tree_id_to_name));
+            throw GrammarException("[*expect_node*]: Expected node with name '" + name + "' in grammar tree", tree->get_pos_begin());
             
         return node;
     }
@@ -187,11 +187,11 @@ namespace qrawlr
         return std::dynamic_pointer_cast<ParseTreeExactMatch>(tree);
     }
 
-    ParseTreeExactMatchRef expect_leaf(ParseTreeRef tree, std::function<std::string(int)> tree_id_to_name)
+    ParseTreeExactMatchRef expect_leaf(ParseTreeRef tree)
     {
         auto leaf = get_leaf(tree);
         if (!leaf)
-            throw GrammarException("[*expect_leaf*]: Expected leaf in grammar tree", tree->get_pos_begin().to_string(tree_id_to_name));
+            throw GrammarException("[*expect_leaf*]: Expected leaf in grammar tree", tree->get_pos_begin());
             
         return leaf;
     }
@@ -269,7 +269,7 @@ namespace qrawlr
     //   sub: <identifier>
     //        <index>
     //        <identifier>#<index>
-    ParseTreeRef expect_child(ParseTreeRef tree, const std::string& path, std::function<std::string(int)> tree_id_to_name)
+    ParseTreeRef expect_child(ParseTreeRef tree, const std::string& path)
     {
         std::size_t sub_begin = 0;
         std::size_t sub_end = path.find('.');
@@ -281,17 +281,17 @@ namespace qrawlr
             // Convert to node if possible, otherwise throw error
             auto node = get_node(tree);
             if (!node)
-                throw GrammarException("Expected node but got leaf in 'get_child'. (path: " + path + ", elem: " + elem + ")", tree->get_pos_begin().to_string(tree_id_to_name));
+                throw GrammarException("Expected node but got leaf in 'get_child'. (path: " + path + ", elem: " + elem + ")", tree->get_pos_begin());
 
             // Parse element
             std::string name;
             int index;
             if (!parse_get_child_path_elem(elem, name, index))
-                throw GrammarException("Invalid index provided in 'get_child'. (path: " + path + ", elem: " + elem + ")", tree->get_pos_begin().to_string(tree_id_to_name));
+                throw GrammarException("Invalid index provided in 'get_child'. (path: " + path + ", elem: " + elem + ")", tree->get_pos_begin());
             
             auto newTree = find_get_child_child(node, name, index);
             if (!newTree)
-                throw GrammarException("Could not find matching child in 'get_child'. (path: " + path + ", elem: " + elem + ")", tree->get_pos_begin().to_string(tree_id_to_name));
+                throw GrammarException("Could not find matching child in 'get_child'. (path: " + path + ", elem: " + elem + ")", tree->get_pos_begin());
             tree = newTree;
 
             sub_begin = sub_end + 1;
@@ -301,19 +301,19 @@ namespace qrawlr
         return tree;
     }
     
-    ParseTreeNodeRef expect_child_node(ParseTreeRef tree, const std::string& path, std::function<std::string(int)> tree_id_to_name)
+    ParseTreeNodeRef expect_child_node(ParseTreeRef tree, const std::string& path)
     {
-        auto node = get_node(expect_child(tree, path, nullptr));
+        auto node = get_node(expect_child(tree, path));
         if (!node)
-            throw GrammarException("Expected node but found leaf matching path '" + path + "'", tree->get_pos_begin().to_string(tree_id_to_name));
+            throw GrammarException("Expected node but found leaf matching path '" + path + "'", tree->get_pos_begin());
         return node;
     }
     
-    ParseTreeExactMatchRef expect_child_leaf(ParseTreeRef tree, const std::string& path, std::function<std::string(int)> tree_id_to_name)
+    ParseTreeExactMatchRef expect_child_leaf(ParseTreeRef tree, const std::string& path)
     {
-        auto leaf = get_leaf(expect_child(tree, path, nullptr));
+        auto leaf = get_leaf(expect_child(tree, path));
         if (!leaf)
-            throw GrammarException("Expected leaf but found node matching path '" + path + "'", tree->get_pos_begin().to_string(tree_id_to_name));
+            throw GrammarException("Expected leaf but found node matching path '" + path + "'", tree->get_pos_begin());
         return leaf;
     }
 
@@ -321,7 +321,7 @@ namespace qrawlr
     {
         try
         {
-            expect_child(tree, path, nullptr);
+            expect_child(tree, path);
             return true;
         }
         catch (const GrammarException&)
@@ -334,7 +334,7 @@ namespace qrawlr
     {
         try
         {
-            expect_child_node(tree, path, nullptr);
+            expect_child_node(tree, path);
             return true;
         }
         catch (const GrammarException&)
@@ -347,7 +347,7 @@ namespace qrawlr
     {
         try
         {
-            expect_child_leaf(tree, path, nullptr);
+            expect_child_leaf(tree, path);
             return true;
         }
         catch (const GrammarException&)

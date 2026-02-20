@@ -7,11 +7,12 @@
 namespace qrawlr
 {
     ParseData::ParseData(const std::string& text, const std::string& filename, const std::map<std::string, RuleRef>& rules)
-        : m_tree_id(++s_tree_id), m_text(text), m_filename(filename), m_rules(rules),
+        : m_tree_id(++s_last_tree_id), m_text(text), m_filename(filename), m_rules(rules),
         m_stacks(), m_stack_histories(),
         m_farthest_match_index(0)
     {
         generate_newline_indices();
+        s_tree_id_to_name_mappings.insert({ m_tree_id, filename });
     }
 
     std::set<std::string> ParseData::get_stack_names() const
@@ -58,12 +59,6 @@ namespace qrawlr
         return { m_tree_id, index, line, column };
     }
 
-    std::string ParseData::get_position_string(int index) const
-    {
-        Position position = get_position(index);
-        return m_filename + ":" + std::to_string(position.line) + ":" + std::to_string(position.column);
-    }
-
     bool ParseData::stacks_are_empty() const
     {
         for (auto& pair : m_stacks)
@@ -80,6 +75,13 @@ namespace qrawlr
         for (std::size_t i = 0; i < m_text.size(); ++i)
             if (m_text[i] == '\n')
                 m_newline_indices.push_back(i);
+    }
+
+    const std::string& ParseData::tree_id_to_name(int tree_id)
+    {
+        static const std::string unknown_name;
+        auto it = s_tree_id_to_name_mappings.find(tree_id);
+        return it == s_tree_id_to_name_mappings.end() ? unknown_name : it->second;
     }
 
 } // namespace qrawlr

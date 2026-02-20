@@ -3,6 +3,8 @@
 #include <string>
 #include <stdexcept>
 
+#include "Position.h"
+
 namespace qrawlr
 {
     class GrammarException : public std::runtime_error
@@ -12,8 +14,8 @@ namespace qrawlr
             : std::runtime_error(message)
         {}
 
-        GrammarException(const std::string& message, const std::string& pos_str)
-            : std::runtime_error(pos_str + ": " + message)
+        GrammarException(const std::string& message, const Position& pos)
+            : std::runtime_error(pos.to_string() + ": " + message)
         {}
     };
 } // namespace qrawlr

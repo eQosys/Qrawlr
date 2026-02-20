@@ -40,16 +40,16 @@ namespace qrawlr
     void Action::action_push(const std::vector<Arg>& args, ParseData& data, int index)
     {
         if (args.size() != 2)
-            throw GrammarException("Invalid number of arguments for action_push", data.get_position_string(index));
+            throw GrammarException("Invalid number of arguments for action_push", data.get_position(index));
 
         auto& arg_item = args[0];
         auto& arg_stack_name = args[1];
 
         if (arg_stack_name.type != ArgType::Identifier)
-            throw GrammarException("Invalid type for stack argument in action_push", data.get_position_string(index));
+            throw GrammarException("Invalid type for stack argument in action_push", data.get_position(index));
 
         if (arg_item.type != ArgType::String)
-            throw GrammarException("Invalid type for item argument in action_push", data.get_position_string(index));
+            throw GrammarException("Invalid type for item argument in action_push", data.get_position(index));
         
         auto& stack = data.get_stack(arg_stack_name.value);
         auto& history = data.get_stack_history(arg_stack_name.value);
@@ -61,18 +61,18 @@ namespace qrawlr
     void Action::action_pop(const std::vector<Arg>& args, ParseData& data, int index)
     {
         if (args.size() != 1)
-            throw GrammarException("Invalid number of arguments for action_pop", data.get_position_string(index));
+            throw GrammarException("Invalid number of arguments for action_pop", data.get_position(index));
 
         auto& arg_stack_name = args[0];
 
         if (arg_stack_name.type != ArgType::Identifier)
-            throw GrammarException("Invalid type for stack argument in action_pop", data.get_position_string(index));
+            throw GrammarException("Invalid type for stack argument in action_pop", data.get_position(index));
 
         auto& stack = data.get_stack(arg_stack_name.value);
         auto& history = data.get_stack_history(arg_stack_name.value);
 
         if (stack.empty())
-            throw GrammarException("Cannot pop from an empty stack", data.get_position_string(index));
+            throw GrammarException("Cannot pop from an empty stack", data.get_position(index));
 
         history.push_back(std::make_pair("pop", stack.back()));
         stack.pop_back();
@@ -81,26 +81,26 @@ namespace qrawlr
     void Action::action_message(const std::vector<Arg>& args, ParseData& data, int index)
     {
         if (args.size() != 1)
-            throw GrammarException("Invalid number of arguments for action_message", data.get_position_string(index));
+            throw GrammarException("Invalid number of arguments for action_message", data.get_position(index));
 
         auto& arg_message = args[0];
 
         if (arg_message.type != ArgType::String)
-            throw GrammarException("Invalid type for message argument in action_message", data.get_position_string(index));
+            throw GrammarException("Invalid type for message argument in action_message", data.get_position(index));
 
-        std::cout << data.get_position_string(index) << "MSG: " << ": " << arg_message.value << std::endl;
+        std::cout << data.get_position(index).to_string() << "MSG: " << ": " << arg_message.value << std::endl;
     }
 
     void Action::action_fail(const std::vector<Arg>& args, ParseData& data, int index)
     {
         if (args.size() != 1)
-            throw GrammarException("Invalid number of arguments for action_fail", data.get_position_string(index));
+            throw GrammarException("Invalid number of arguments for action_fail", data.get_position(index));
 
         auto& arg_message = args[0];
 
         if (arg_message.type != ArgType::String)
-            throw GrammarException("Invalid type for message argument in action_fail", data.get_position_string(index));
+            throw GrammarException("Invalid type for message argument in action_fail", data.get_position(index));
 
-        throw GrammarException("FAIL: " + arg_message.value, data.get_position_string(index));
+        throw GrammarException("FAIL: " + arg_message.value, data.get_position(index));
     }
 } // namespace qrawlr

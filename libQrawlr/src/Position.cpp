@@ -1,9 +1,11 @@
 #include "Position.h"
 
+#include "ParseData.h"
+
 namespace qrawlr {
-    std::string Position::to_string(std::function<std::string(int)> tree_id_to_name) const
+    std::string Position::to_string() const
     {
-        std::string name = tree_id_to_name ? (tree_id_to_name(tree_id) + ":") : "";
-        return name + std::to_string(line) + ":" + std::to_string(column);
+        auto name = ParseData::tree_id_to_name(tree_id);
+        return (name.empty() ? "" : (name + ":")) + std::to_string(line) + ":" + std::to_string(column);
     }
 } // namespace qrawlr

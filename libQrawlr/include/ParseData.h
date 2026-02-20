@@ -32,7 +32,6 @@ namespace qrawlr
         Checkpoint get_checkpoint() const;
         void restore_checkpoint(const Checkpoint& checkpoint);
         Position get_position(int index) const;
-        std::string get_position_string(int index) const;
         bool stacks_are_empty() const;
         int get_farthest_match_index() const { return m_farthest_match_index; }
         void set_farthest_match_index(int index) { m_farthest_match_index = index; }
@@ -47,7 +46,10 @@ namespace qrawlr
         std::map<std::string, std::vector<std::pair<std::string, std::string>>> m_stack_histories;
         std::vector<int> m_newline_indices;
         int m_farthest_match_index;
+    public:
+        static const std::string& tree_id_to_name(int tree_id);
     private:
-        static inline int s_tree_id = 0;
+        static inline int s_last_tree_id = 0;
+        static inline std::map<int, std::string> s_tree_id_to_name_mappings;
     };
 } // namespace qrawlr

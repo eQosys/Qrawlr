@@ -47,7 +47,6 @@ namespace qrawlr
     private:
         std::map<std::string, RuleRef> m_rules;
         std::string m_filename;
-        std::function<std::string(int)> m_f_tree_id_to_name;
     private:
         static Grammar load_internal_grammar();
     };
